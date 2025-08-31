@@ -1,0 +1,1007 @@
+/* === ENHANCED TABLE & CARD STYLES === */
+
+.card .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e9ecef; /* Lighter border */
+}
+
+.card .card-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #343a40;
+}
+
+.card .search-container {
+    position: relative;
+    width: 300px;
+}
+
+.card .search-input {
+    width: 100%;
+    padding: 0.7rem 1rem 0.7rem 2.5rem;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.card .search-input:focus {
+    outline: none;
+    border-color: #80bdff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+.card .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+}
+
+/* The container for responsive horizontal scrolling */
+.table-container {
+    overflow-x: auto;
+    width: 100%;
+}
+
+/* The table itself */
+.card table {
+    width: 100%;
+    min-width: 900px; /* Ensures content doesn't get squished */
+    border-collapse: collapse;
+    text-align: left;
+}
+
+/* Table Header */
+.card table th {
+    background-color: #f8f9fa;
+    color: #495057;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    padding: 15px;
+    border-bottom: 2px solid #dee2e6;
+}
+
+/* Table Body Rows */
+.card table tbody tr {
+    border-bottom: 1px solid #e9ecef;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card table tbody tr:last-of-type {
+    border-bottom: none;
+}
+
+.card table tbody tr:hover {
+    background-color: #ffffff;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.07);
+    transform: scale(1.01); /* Lifts the row slightly */
+}
+
+/* Table Cells */
+.card table td {
+    padding: 15px;
+    vertical-align: middle;
+    color: #6c757d;
+}
+
+/* Make the first column (e.g., username, ID) stand out */
+.card table td:first-child {
+    font-weight: 500;
+    color: #343a40;
+}
+
+/* Badge style inside the table */
+.card table .badge {
+    padding: 0.35rem 0.75rem;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    background-color: rgba(0, 123, 255, 0.1);
+    color: #0056b3;
+    display: inline-block;
+}
+
+/* Action button inside the table */
+.card table .btn-sm {
+    box-shadow: none; /* Make buttons in tables flatter */
+}
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background-color: #f4f7f6;
+    color: #333;
+    display: flex;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 260px;
+    background-color: #ffffff;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease;
+    border-right: 1px solid #e0e0e0;
+    position: fixed;
+    height: 100%;
+    z-index: 1000;
+    flex-shrink: 0; /* Prevent sidebar from shrinking */
+}
+
+.sidebar.collapsed {
+    transform: translateX(-100%);
+}
+
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-left: 10px;
+}
+
+.sidebar-header .logo-icon {
+    font-size: 24px;
+    color: #2c3e50;
+    margin-right: 10px;
+}
+
+.sidebar-header .brand-name {
+    font-size: 20px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.main-menu-title {
+    font-size: 0.75rem;
+    color: #888;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    padding-left: 10px;
+    font-weight: 600;
+}
+
+.nav-menu {
+    list-style: none;
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+.nav-item {
+    margin-bottom: 5px;
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    color: #555;
+    text-decoration: none;
+    border-radius: 6px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.nav-link i {
+    min-width: 20px;
+    margin-right: 15px;
+    font-size: 16px;
+    color: #777;
+    transition: color 0.2s ease;
+}
+
+.nav-link span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.nav-link:hover,
+.nav-link.active {
+    background-color: #e8f0fe;
+    color: #2962ff;
+}
+
+.nav-link.active i,
+.nav-link:hover i {
+    color: #2962ff;
+}
+
+/* Main Content Wrapper */
+.main-wrapper {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    margin-left: 260px; /* Make space for the fixed sidebar */
+    transition: margin-left 0.3s ease;
+}
+
+body.sidebar-collapsed .main-wrapper {
+    margin-left: 0;
+}
+
+/* Top Bar */
+.top-bar {
+    background-color: #ffffff;
+    padding: 15px 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #e0e0e0;
+    height: 70px;
+}
+
+.hamburger-menu {
+    display: none; /* Hidden by default, shown in media queries */
+    font-size: 24px;
+    color: #333;
+    cursor: pointer;
+    margin-right: 15px;
+}
+
+.search-bar {
+    display: flex;
+    align-items: center;
+    background-color: #f4f7f6;
+    border-radius: 6px;
+    padding: 8px 12px;
+    width: 300px;
+}
+
+.search-bar i {
+    color: #888;
+    margin-right: 8px;
+}
+
+.search-bar input {
+    border: none;
+    background: transparent;
+    outline: none;
+    width: 100%;
+    font-size: 0.9rem;
+}
+
+.top-bar-actions {
+    display: flex;
+    align-items: center;
+}
+
+.action-icon {
+    font-size: 20px;
+    color: #555;
+    margin-left: 20px;
+    cursor: pointer;
+}
+
+.user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: #ffab00;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    margin-left: 20px;
+    font-size: 0.9rem;
+}
+
+.content-area {
+    padding: 30px;
+    flex-grow: 1;
+    background-color: #f4f7f6;
+}
+
+/* General Card style for content */
+.card {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.content-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.content-header .title {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.header-actions button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.header-actions button:hover {
+    background-color: #0056b3;
+}
+
+
+/* --- Responsive Media Queries --- */
+
+@media (max-width: 992px) {
+    .sidebar {
+        transform: translateX(-100%);
+    }
+    .sidebar.active {
+        transform: translateX(0);
+        box-shadow: 5px 0 15px rgba(0,0,0,0.1);
+    }
+    .main-wrapper {
+        margin-left: 0;
+    }
+    .hamburger-menu {
+        display: block;
+    }
+}
+
+/* Other media queries from original file should also be here */
+@media (max-width: 768px) {
+    .content-area {
+        padding: 20px;
+    }
+}
+@media (max-width: 576px) {
+    .search-bar {
+        display: none;
+    }
+}
+
+/* Overlay for mobile sidebar */
+.overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.4);
+    z-index: 999;
+}
+.overlay.active {
+    display: block;
+}
+
+/* === STYLES FOR FEES PAGE === */
+
+/* General Card style for content pages */
+.card {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.fees-table-container {
+    overflow-x: auto;
+}
+
+.fees-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.fees-table th, .fees-table td {
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    text-align: left;
+    vertical-align: middle;
+}
+
+.fees-table th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+.fees-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.fees-table tr:hover {
+    background-color: #f1f1f1;
+}
+
+.fees-table .amount-due {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+/* Status Pills */
+.status-pill {
+    padding: 5px 12px;
+    border-radius: 15px;
+    color: white;
+    font-size: 0.85em;
+    font-weight: bold;
+    text-transform: capitalize;
+    display: inline-block;
+    min-width: 80px;
+    text-align: center;
+}
+
+.status-pill.status-cleared { background-color: #28a745; }
+.status-pill.status-partial { background-color: #17a2b8; }
+.status-pill.status-pending { background-color: #ffc107; color: #333; }
+.status-pill.status-overdue { background-color: #dc3545; }
+.status-pill.status-not-set { background-color: #6c757d; }
+
+/* Notification Messages */
+.notification {
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid transparent;
+    border-radius: 4px;
+}
+.notification.success { background-color: #d4edda; border-color: #c3e6cb; color: #155724; }
+.notification.error { background-color: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+
+/* Pagination */
+.pagination {
+    margin-top: 1.5rem;
+    text-align: center;
+}
+.pagination a, .pagination span {
+    display: inline-block;
+    padding: 8px 12px;
+    margin: 0 4px;
+    border: 1px solid #ddd;
+    color: #007bff;
+    text-decoration: none;
+    border-radius: 4px;
+}
+.pagination a:hover {
+    background-color: #f4f4f4;
+}
+.pagination .current-page {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+    cursor: default;
+}
+.pagination .disabled {
+    color: #6c757d;
+    cursor: default;
+    border-color: #ddd;
+}
+.btn.btn-sm {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+}
+
+/* === UPDATED BUTTON STYLES === */
+
+/* General Button Styles */
+.btn {
+    display: inline-flex; /* Use flexbox for icon + text alignment */
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    border-radius: 50px; /* This creates the pill shape */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.btn i {
+    margin-right: 8px; /* Space between icon and text */
+}
+
+/* === UPDATED PRIMARY BUTTON STYLE (Matching User's Image) === */
+.btn-primary {
+    background: linear-gradient(to right, #0091ea, #0077d1); /* Blue gradient */
+    color: white;
+    border: none; /* Remove default border */
+    padding: 10px 20px; /* Adjust padding for size */
+    font-size: 0.9rem;
+    font-weight: 500;
+    border-radius: 25px; /* Creates the pill shape */
+    cursor: pointer;
+    transition: background 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Optional: Add a subtle shadow */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none; /* Ensure no underlines if used as a link */
+}
+
+.btn-primary i {
+    margin-right: 8px; /* Space between icon and text */
+    font-size: 1rem; /* Adjust icon size if needed */
+}
+
+.btn-primary:hover {
+    background: linear-gradient(to right, #00a2ff, #0084e8); /* Slightly brighter on hover */
+    box-shadow: 0 3px 7px rgba(0, 0, 0, 0.3); /* Slightly stronger shadow on hover */
+    transform: translateY(-1px); /* Subtle lift on hover */
+}
+
+/* Small button variant for tables */
+.btn.btn-sm {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    border-radius: 15px; /* Smaller pill shape for small buttons */
+}
+
+.btn.btn-sm i {
+    margin-right: 5px;
+    font-size: 0.9rem; /* Adjust icon size for small buttons */
+}
+
+
+/* === STYLES FOR STUDENT RECORDS PAGE (Search/Filter) === */
+
+.search-filter-container {
+    padding: 1rem;
+    background-color: #f8f9fa; /* A light background to stand out */
+    border-radius: 8px; /* Consistent border radius */
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+}
+
+.search-filter-container .search-box {
+    flex: 1 1 300px; /* Flexible but with a base width */
+    position: relative;
+}
+
+.search-filter-container .search-box .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+}
+
+.search-filter-container .search-box input,
+.search-filter-container select {
+    width: 100%;
+    padding: 0.7rem 1rem;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.search-filter-container .search-box input {
+    padding-left: 2.5rem; /* Make space for the icon */
+}
+
+.search-filter-container select {
+    flex: 1 1 150px; /* Smaller flex size for the dropdown */
+    cursor: pointer;
+}
+
+.search-filter-container input:focus,
+.search-filter-container select:focus {
+    outline: none;
+    border-color: #80bdff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+/* === STYLES FOR ICON-ONLY ACTION BUTTONS (in tables) === */
+
+.actions-container {
+    display: flex;
+    gap: 0.5rem; /* Puts a little space between the buttons */
+}
+
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid transparent;
+    border-radius: 50%; /* Makes the button circular */
+    text-decoration: none;
+    transition: all 0.2s ease-in-out;
+    color: #6c757d; /* Default muted color */
+}
+
+.btn-icon:hover {
+    background-color: #e9ecef; /* Light background on hover */
+}
+
+/* Specific color for edit icon on hover */
+.btn-icon.btn-edit:hover {
+    color: var(--primary, #007bff); /* Uses the blue from our button styles */
+    background-color: rgba(0, 123, 255, 0.1);
+}
+
+/* Specific color for delete icon on hover */
+.btn-icon.btn-delete:hover {
+    color: var(--danger, #dc3545); /* Uses a standard red for danger */
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+/* === STYLES FOR MANAGE SUPER ADMINS PAGE === */
+
+/* For the user avatar inside a table row */
+.table-avatar {
+    width: 36px;
+    height: 36px;
+    background-color: #e8f0fe; /* A light, consistent blue */
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: #2962ff; /* A darker blue for the letter */
+    font-size: 0.9rem;
+}
+
+/* A container to align the avatar and username nicely */
+.user-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Colored Button Variants (Success, Warning, Danger) */
+.btn-success {
+    background-color: #10b981; /* Green */
+    color: white;
+}
+.btn-success:hover {
+    background-color: #059669;
+}
+
+.btn-warning {
+    background-color: #f59e0b; /* Amber/Yellow */
+    color: #ffffff;
+}
+.btn-warning:hover {
+    background-color: #d97706;
+}
+
+.btn-danger {
+    background-color: #ef4444; /* Red */
+    color: white;
+}
+.btn-danger:hover {
+    background-color: #dc2626;
+}
+
+/* === STYLES FOR SYSTEM ANALYSIS PAGE (Metrics & Charts) === */
+
+.section-title {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 1.5rem;
+    position: relative;
+    padding-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+}
+
+.section-title::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 3px;
+    width: 50px;
+    background-color: var(--primary, #007bff); /* Use theme's primary color */
+    border-radius: 10px;
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+}
+
+.metric-card {
+    background-color: #ffffff;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    transition: all 0.3s ease;
+    text-align: center;
+    border-top: 4px solid var(--primary, #007bff);
+}
+
+.metric-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+.metric-card .metric-icon {
+    font-size: 2.2rem;
+    color: var(--primary, #007bff);
+    background-color: #e8f0fe; /* Light blue background */
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    margin: 0 auto 1rem auto;
+}
+
+.metric-card h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #4a5568;
+    margin-bottom: 0.5rem;
+}
+
+.metric-card .metric-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.chart-container {
+    position: relative;
+    height: 350px;
+    padding: 1rem;
+}
+
+.chart-legend {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    margin-top: 1.5rem;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+/* === VIBRANT METRIC CARD STYLES === */
+
+/* We will assign a unique color to each type of card */
+/* Blue for Students */
+.metric-card.students { border-top-color: #3b82f6; }
+.metric-card.students .metric-icon { background-color: #dbeafe; color: #2563eb; }
+
+/* Green for Staff */
+.metric-card.staff { border-top-color: #10b981; }
+.metric-card.staff .metric-icon { background-color: #d1fae5; color: #059669; }
+
+/* Amber/Orange for Subjects */
+.metric-card.subjects { border-top-color: #f59e0b; }
+.metric-card.subjects .metric-icon { background-color: #fef3c7; color: #d97706; }
+
+
+/* === HIGH-CONTRAST TABLE HEADER === */
+/* This will override the previous light gray header */
+
+.card table th {
+    background-color: #1e293b; /* A dark, professional slate color */
+    color: #ffffff; /* White text for high contrast */
+    border-bottom: 2px solid #0f172a; /* A slightly darker border */
+    border-top: none;
+}
+
+/* === STANDARD FORM STYLES === */
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #4a5568;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    font-size: 1rem;
+    transition: all 0.2s ease-in-out;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary, #007bff); /* Uses theme's primary color on focus */
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
+}
+
+.form-actions {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    justify-content: flex-end; /* Aligns buttons to the right */
+    gap: 1rem;
+}
+
+/* --- General Table & Card Improvements --- */
+.card {
+    overflow: hidden; /* Contains children with border-radius */
+}
+
+.fees-table-container {
+    width: 100%;
+    overflow-x: auto; /* Ensures table is scrollable on small screens */
+}
+
+.fees-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.fees-table th, .fees-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.fees-table thead th {
+    background-color: #333;
+    color: #fff;
+    font-weight: 600;
+}
+
+.fees-table tbody tr:nth-of-type(even) {
+    background-color: #f9f9f9;
+}
+
+.fees-table tbody tr:hover {
+    background-color: #f1f1f1;
+}
+
+/* --- NEW: Status Pills Styling --- */
+.status-pill {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-size: 0.8em;
+    font-weight: bold;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: center;
+    min-width: 80px;
+}
+
+.status-cleared { background-color: #28a745; } /* Green */
+.status-partial { background-color: #ffc107; color: #333; } /* Yellow/Orange */
+.status-overdue { background-color: #dc3545; } /* Red */
+.status-pending { background-color: #6c757d; } /* Grey */
+.status-no-fee-assigned { background-color: #343a40; } /* Dark Grey */
+
+/* --- NEW: Cell-Specific Styling --- */
+.amount-due {
+    color: #dc3545; /* Red for emphasis */
+    font-weight: bold;
+}
+
+.date-overdue {
+    color: #dc3545; /* Red for emphasis */
+    font-weight: bold;
+}
+
+/* --- NEW: Sortable Table Headers --- */
+.fees-table thead th.sortable a,
+.fees-table thead th a {
+    color: #fff;
+    text-decoration: none;
+    display: block;
+}
+.fees-table thead th a:hover {
+    color: #ddd;
+}
+
+/* --- NEW: Filter & Bulk Action Controls --- */
+.table-controls, .bulk-actions-container {
+    padding: 15px;
+    background-color: #fdfdfd;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.filter-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: center;
+}
+
+.filter-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.filter-form select {
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+
+.bulk-actions-container {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding-top: 20px;
+}
+.bulk-actions-container select {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+/* --- Button Styling (assuming you have a .btn class) --- */
+.btn {
+    padding: 8px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+}
+.btn-primary { background-color: #007bff; color: white; }
+.btn-secondary { background-color: #6c757d; color: white; }
+
+/* --- Pagination Styling --- */
+.pagination {
+    padding: 20px 15px;
+    text-align: right;
+}
+.pagination a, .pagination span {
+    margin: 0 4px;
+    padding: 8px 12px;
+    text-decoration: none;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    color: #007bff;
+}
+.pagination span.disabled {
+    color: #aaa;
+    border-color: #eee;
+}
+.pagination span.current-page {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+}
