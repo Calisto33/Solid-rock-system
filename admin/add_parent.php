@@ -7,72 +7,6 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
     header("Location: ../login.php");
     exit();
 }
-
-// Check what tables exist
-$usersTableExists = $conn->query("SHOW TABLES LIKE 'users'")->num_rows > 0;
-$parentsTableExists = $conn->query("SHOW TABLES LIKE 'parents'")->num_rows > 0;
-
-// Check what columns exist in the parents table
-$parentsColumns = [];
-if ($parentsTableExists) {
-    $parentsColumnsResult = $conn->query("SHOW COLUMNS FROM parents");
-    while ($row = $parentsColumnsResult->fetch_assoc()) {
-        $parentsColumns[] = $row['Field'];
-    }
-}
-
-// Check what columns exist in the users table
-$usersColumns = [];
-if ($usersTableExists) {
-    $usersColumnsResult = $conn->query("SHOW COLUMNS FROM users");
-    while ($row = $usersColumnsResult->fetch_assoc()) {
-        $usersColumns[] = $row['Field'];
-    }
-}
-
-// Check what columns exist in the students table and find primary key
-$studentsColumnsQuery = "SHOW COLUMNS FROM students";
-$studentsColumnsResult = $conn->query($studentsColumnsQuery);
-$studentsPrimaryKey = null;
-$existingStudentColumns = [];
-
-if ($studentsColumnsResult) {
-    while ($row = $studentsColumnsResult->fetch_assoc()) {
-        $existingStudentColumns[] = $row['Field'];
-        if ($row['Key'] === 'PRI') {
-            $studentsPrimaryKey = $row['Field'];
-        }
-    }
-}
-
-// If no primary key found, try common alternatives for students
-if (!$studentsPrimaryKey) {
-    $possiblePrimaryKeys = ['student_id', 'id', 'user_id'];
-    foreach ($possiblePrimaryKeys as $key) {
-        if (in_array($key, $existingStudentColumns)) {
-            $studentsPrimaryKey = $key;
-            break;
-        }
-    }
-}
-
-// Final fallback - use first column if still no primary key found
-if (!$studentsPrimaryKey && !empty($existingStudentColumns)) {
-    $studentsPrimaryKey = $existingStudentColumns[0];
-}
-
-// Check if we can support parent creation based on table structure
-$canCreateParent = $parentsTableExists && (
-    $usersTableExists && 
-    in_array('user_id', $parentsColumns) && 
-    in_array('username', $usersColumns)
-);
-
-$hasDirectParentFields = $parentsTableExists && (
-    in_array('first_name', $parentsColumns) ||
-    in_array('username', $parentsColumns) ||
-    in_array('email', $parentsColumns)
-);
 ?>
 
 <!DOCTYPE html>
@@ -256,30 +190,6 @@ $hasDirectParentFields = $parentsTableExists && (
             font-size: 0.95rem;
         }
 
-        .error-box {
-            background-color: #f8d7da;
-            border: 1px solid #f5c6cb;
-            color: #721c24;
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .warning-box {
-            background-color: #fff3cd;
-            border: 1px solid #ffeaa7;
-            color: #856404;
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
         .form-group {
             margin-bottom: 1.8rem;
             position: relative;
@@ -348,13 +258,6 @@ $hasDirectParentFields = $parentsTableExists && (
 
         button:active {
             transform: translateY(0);
-        }
-
-        button:disabled {
-            background: var(--text-light);
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
         }
 
         .form-grid {
@@ -522,84 +425,62 @@ $hasDirectParentFields = $parentsTableExists && (
                 Add New Parent
             </h2>
 
-            <?php if (!$canCreateParent && !$hasDirectParentFields): ?>
-                <div class="error-box">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <div>
-                        <strong>Database Configuration Issue:</strong> 
-                        Your database structure doesn't support parent creation through this interface. 
-                        <?php if (!$usersTableExists): ?>
-                        The 'users' table is missing.
-                        <?php endif; ?>
-                        <?php if (!$parentsTableExists): ?>
-                        The 'parents' table is missing.
-                        <?php endif; ?>
-                        Please check your database setup.
+            <div class="info-box">
+                <i class="fas fa-info-circle"></i>
+                <p>Create a new parent account. You can assign multiple students to this parent during registration or later from the parent management page.</p>
+            </div>
+
+            <form action="process_add_parent.php" method="POST">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="first_name">First Name <span class="required">*</span></label>
+                        <input type="text" id="first_name" name="first_name" required>
                     </div>
-                </div>
-            <?php else: ?>
 
-                <?php if (!$studentsPrimaryKey): ?>
-                    <div class="warning-box">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <div>
-                            <strong>Warning:</strong> Could not determine the primary key for the students table. 
-                            Student assignment may not work properly.
-                        </div>
+                    <div class="form-group">
+                        <label for="last_name">Last Name <span class="required">*</span></label>
+                        <input type="text" id="last_name" name="last_name" required>
                     </div>
-                <?php endif; ?>
 
-                <div class="info-box">
-                    <i class="fas fa-info-circle"></i>
-                    <p>
-                        <?php if ($canCreateParent): ?>
-                        Create a new parent account. This will create both a user account and parent profile.
-                        <?php else: ?>
-                        Create a new parent profile. Note: Your database structure may require manual user account creation.
-                        <?php endif; ?>
-                    </p>
-                </div>
+                    <div class="form-group">
+                        <label for="username">Username <span class="required">*</span></label>
+                        <input type="text" id="username" name="username" required>
+                    </div>
 
-                <form action="process_add_parent.php" method="POST">
-                    <div class="form-grid">
-                        <?php if ($canCreateParent || $hasDirectParentFields): ?>
-                            <?php if ($usersTableExists && in_array('first_name', $usersColumns)): ?>
-                            <div class="form-group">
-                                <label for="first_name">First Name <span class="required">*</span></label>
-                                <input type="text" id="first_name" name="first_name" required>
-                            </div>
-                            <?php endif; ?>
+                    <div class="form-group">
+                        <label for="email">Email Address <span class="required">*</span></label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
 
-                            <?php if ($usersTableExists && in_array('last_name', $usersColumns)): ?>
-                            <div class="form-group">
-                                <label for="last_name">Last Name <span class="required">*</span></label>
-                                <input type="text" id="last_name" name="last_name" required>
-                            </div>
-                            <?php endif; ?>
+                    <div class="form-group">
+                        <label for="password">Password <span class="required">*</span></label>
+                        <input type="password" id="password" name="password" required>
+                    </div>
 
-                            <?php if ($usersTableExists && in_array('username', $usersColumns)): ?>
-                            <div class="form-group">
-                                <label for="username">Username <span class="required">*</span></label>
-                                <input type="text" id="username" name="username" required>
-                            </div>
-                            <?php endif; ?>
+                    <div class="form-group">
+                        <label for="phone_number">Phone Number <span class="required">*</span></label>
+                        <input type="text" id="phone_number" name="phone_number" required>
+                    </div>
 
-                            <?php if ($usersTableExists && in_array('email', $usersColumns)): ?>
-                            <div class="form-group">
-                                <label for="email">Email Address <span class="required">*</span></label>
-                                <input type="email" id="email" name="email" required>
-                            </div>
-                            <?php endif; ?>
+                    <div class="form-group form-full">
+                        <label for="relationship">Relationship <span class="required">*</span></label>
+                        <select id="relationship" name="relationship" required>
+                            <option value="" disabled selected>Select relationship...</option>
+                            <option value="Father">Father</option>
+                            <option value="Mother">Mother</option>
+                            <option value="Guardian">Guardian</option>
+                            <option value="Stepfather">Stepfather</option>
+                            <option value="Stepmother">Stepmother</option>
+                            <option value="Grandparent">Grandparent</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
 
-                            <?php if ($usersTableExists && in_array('password', $usersColumns)): ?>
-                            <div class="form-group">
-                                <label for="password">Password <span class="required">*</span></label>
-                                <input type="password" id="password" name="password" required>
-                            </div>
-                            <?php endif; ?>
-                        <?php endif; ?>
+                    <div class="form-group form-full">
+                        <label for="address">Home Address <span class="required">*</span></label>
+                        <textarea id="address" name="address" rows="3" required placeholder="Enter full home address..."></textarea>
+                    </div>
 
-<<<<<<< HEAD
                     <div class="form-group form-full">
                         <label>Assign Students (Optional)</label>
                         <div class="student-selection">
@@ -624,141 +505,41 @@ $hasDirectParentFields = $parentsTableExists && (
                                     echo '<div class="student-checkbox">';
                                     echo '<input type="checkbox" name="student_ids[]" value="' . htmlspecialchars($student['student_id']) . '" id="student_' . htmlspecialchars($student['student_id']) . '">';
                                     echo '<label for="student_' . htmlspecialchars($student['student_id']) . '">' . htmlspecialchars($studentName) . '</label>';
-=======
-                        <?php if (in_array('phone_number', $parentsColumns)): ?>
-                        <div class="form-group">
-                            <label for="phone_number">Phone Number <span class="required">*</span></label>
-                            <input type="text" id="phone_number" name="phone_number" required>
-                        </div>
-                        <?php endif; ?>
-
-                        <?php if (in_array('relationship', $parentsColumns)): ?>
-                        <div class="form-group form-full">
-                            <label for="relationship">Relationship <span class="required">*</span></label>
-                            <select id="relationship" name="relationship" required>
-                                <option value="" disabled selected>Select relationship...</option>
-                                <option value="Father">Father</option>
-                                <option value="Mother">Mother</option>
-                                <option value="Guardian">Guardian</option>
-                            </select>
-                            <div class="optional-note">
-                                Note: Only Father, Mother, or Guardian are supported by the current database structure.
-                            </div>
-                        </div>
-                        <?php endif; ?>
-
-                        <?php if (in_array('address', $parentsColumns)): ?>
-                        <div class="form-group form-full">
-                            <label for="address">Home Address <span class="required">*</span></label>
-                            <textarea id="address" name="address" rows="3" required placeholder="Enter full home address..."></textarea>
-                        </div>
-                        <?php endif; ?>
-
-                        <div class="form-group form-full">
-                            <label>Assign Students <span class="required">*</span></label>
-                            <div class="info-box" style="margin-bottom: 1rem;">
-                                <i class="fas fa-info-circle"></i>
-                                <p><strong>Note:</strong> At least one student must be selected due to database requirements.</p>
-                            </div>
-                            <div class="student-selection">
-                                <?php
-                                if ($studentsPrimaryKey && !empty($existingStudentColumns)) {
-                                    // Build the query dynamically based on available columns
-                                    $selectColumns = [$studentsPrimaryKey];
-                                    $optionalColumns = ['first_name', 'last_name', 'username'];
-                                    
-                                    foreach ($optionalColumns as $col) {
-                                        if (in_array($col, $existingStudentColumns)) {
-                                            $selectColumns[] = $col;
-                                        }
-                                    }
-                                    
-                                    $selectClause = implode(', ', $selectColumns);
-                                    
-                                    // Build ORDER BY clause
-                                    $orderBy = 'username'; // Default fallback
-                                    if (in_array('first_name', $existingStudentColumns) && in_array('last_name', $existingStudentColumns)) {
-                                        $orderBy = 'first_name, last_name';
-                                    } elseif (in_array('username', $existingStudentColumns)) {
-                                        $orderBy = 'username';
-                                    } else {
-                                        $orderBy = $studentsPrimaryKey;
-                                    }
-                                    
-                                    $studentsQuery = "SELECT $selectClause FROM students ORDER BY $orderBy";
-                                    
-                                    try {
-                                        $studentsResult = $conn->query($studentsQuery);
-                                        
-                                        if ($studentsResult && $studentsResult->num_rows > 0) {
-                                            while ($student = $studentsResult->fetch_assoc()) {
-                                                // Build student name based on available columns
-                                                $studentName = '';
-                                                if (isset($student['first_name']) && isset($student['last_name'])) {
-                                                    $studentName = trim($student['first_name'] . ' ' . $student['last_name']);
-                                                }
-                                                if (empty($studentName) && isset($student['username'])) {
-                                                    $studentName = $student['username'];
-                                                }
-                                                if (empty($studentName)) {
-                                                    $studentName = 'Student ID: ' . $student[$studentsPrimaryKey];
-                                                }
-                                                
-                                                echo '<div class="student-checkbox">';
-                                                echo '<input type="checkbox" name="student_ids[]" value="' . htmlspecialchars($student[$studentsPrimaryKey]) . '" id="student_' . htmlspecialchars($student[$studentsPrimaryKey]) . '">';
-                                                echo '<label for="student_' . htmlspecialchars($student[$studentsPrimaryKey]) . '">' . htmlspecialchars($studentName . ' (' . $student[$studentsPrimaryKey] . ')') . '</label>';
-                                                echo '</div>';
-                                            }
-                                        } else {
-                                            echo '<p style="color: var(--text-light); font-style: italic; padding: 1rem;">No students available for assignment.</p>';
-                                        }
-                                    } catch (Exception $e) {
-                                        echo '<div class="error-box" style="margin: 0;">';
-                                        echo '<i class="fas fa-exclamation-triangle"></i>';
-                                        echo '<div><strong>Database Error:</strong> Could not load students. ' . htmlspecialchars($e->getMessage()) . '</div>';
-                                        echo '</div>';
-                                    }
-                                } else {
-                                    echo '<div class="warning-box" style="margin: 0;">';
-                                    echo '<i class="fas fa-exclamation-triangle"></i>';
-                                    echo '<div><strong>Configuration Warning:</strong> Could not determine students table structure. Student assignment is disabled.</div>';
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                                     echo '</div>';
                                 }
-                                ?>
-                            </div>
-                            <div class="optional-note">You must select at least one student due to database requirements. You can select multiple students if needed.</div>
+                            } else {
+                                echo '<p style="color: var(--text-light); font-style: italic; padding: 1rem;">No students available for assignment.</p>';
+                            }
+                            ?>
                         </div>
-
-                        <!-- Hidden role field since this is specifically for parents -->
-                        <input type="hidden" name="role" value="parent">
-                        
-                        <!-- Hidden fields to indicate table structure -->
-                        <input type="hidden" name="has_users_table" value="<?= $usersTableExists ? '1' : '0' ?>">
-                        <input type="hidden" name="can_create_parent" value="<?= $canCreateParent ? '1' : '0' ?>">
+                        <div class="optional-note">You can select multiple students to assign to this parent, or do it later from the parent management page.</div>
                     </div>
 
-                    <div class="form-actions">
-                        <a href="parents.php" class="btn-secondary">
-                            <i class="fas fa-arrow-left"></i> Cancel
-                        </a>
-                        <button type="submit" <?= !$canCreateParent && !$hasDirectParentFields ? 'disabled' : '' ?>>
-                            <i class="fas fa-save"></i>
-                            Register Parent
-                        </button>
-                    </div>
-                </form>
-            <?php endif; ?>
+                    <!-- Hidden role field since this is specifically for parents -->
+                    <input type="hidden" name="role" value="parent">
+                </div>
+
+                <div class="form-actions">
+                    <a href="parents.php" class="btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Cancel
+                    </a>
+                    <button type="submit">
+                        <i class="fas fa-save"></i>
+                        Register Parent
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
     <script>
         // Form validation
         document.querySelector('form').addEventListener('submit', function(e) {
-            const requiredFields = document.querySelectorAll('input[required], select[required], textarea[required]');
+            const requiredFields = ['first_name', 'last_name', 'username', 'email', 'password', 'phone_number', 'relationship', 'address'];
             let hasErrors = false;
 
-            requiredFields.forEach(field => {
+            requiredFields.forEach(fieldName => {
+                const field = document.getElementById(fieldName);
                 if (!field.value.trim()) {
                     field.style.borderColor = '#e74c3c';
                     hasErrors = true;
@@ -769,20 +550,18 @@ $hasDirectParentFields = $parentsTableExists && (
 
             // Email validation
             const email = document.getElementById('email');
-            if (email && email.value) {
-                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(email.value)) {
-                    email.style.borderColor = '#e74c3c';
-                    alert('Please enter a valid email address.');
-                    hasErrors = true;
-                    e.preventDefault();
-                    return;
-                }
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (email.value && !emailRegex.test(email.value)) {
+                email.style.borderColor = '#e74c3c';
+                alert('Please enter a valid email address.');
+                hasErrors = true;
+                e.preventDefault();
+                return;
             }
 
             // Password validation
             const password = document.getElementById('password');
-            if (password && password.value && password.value.length < 6) {
+            if (password.value && password.value.length < 6) {
                 password.style.borderColor = '#e74c3c';
                 alert('Password must be at least 6 characters long.');
                 hasErrors = true;
@@ -810,6 +589,23 @@ $hasDirectParentFields = $parentsTableExists && (
                 if (this.style.borderColor === 'rgb(231, 76, 60)') { // #e74c3c
                     this.style.borderColor = '#e0e0e0';
                 }
+            });
+        });
+
+        // Student selection counter
+        document.addEventListener('DOMContentLoaded', function() {
+            const checkboxes = document.querySelectorAll('input[name="student_ids[]"]');
+            const updateCounter = () => {
+                const checkedCount = document.querySelectorAll('input[name="student_ids[]"]:checked').length;
+                const label = document.querySelector('label[for="address"]').previousElementSibling;
+                if (label && label.tagName === 'LABEL') {
+                    const counterText = checkedCount > 0 ? ` (${checkedCount} selected)` : '';
+                    label.textContent = label.textContent.replace(/ \(\d+ selected\)/, '') + counterText;
+                }
+            };
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', updateCounter);
             });
         });
     </script>

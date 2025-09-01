@@ -17,7 +17,7 @@ $filter_class = $_GET['filter_class'] ?? ''; // Empty string for 'All Classes'
 $filter_status = $_GET['filter_status'] ?? ''; // Empty string for 'All Statuses'
 
 $classes = [];
-$classQuery = "SELECT DISTINCT class FROM attendance WHERE class IS NOT NULL AND class != '' ORDER BY class ASC";
+$classQuery = "SELECT DISTINCT class FROM students ORDER BY class ASC";
 $classResult = $conn->query($classQuery);
 if ($classResult) {
     while ($row = $classResult->fetch_assoc()) {
@@ -25,14 +25,7 @@ if ($classResult) {
     }
 }
 
-<<<<<<< HEAD
 // --- FIXED: Updated column names to match database structure ---
-=======
-// Debug: Uncomment to see what classes are found
-// echo "Classes found: " . print_r($classes, true) . "<br>";
-
-// Fixed SQL query with correct column names - added debugging
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
 $sql = "SELECT a.attendance_date, s.student_id, s.username, a.class, a.status, a.notes, a.teacher_id, a.updated_at 
         FROM attendance a
         JOIN students s ON a.student_id = s.student_id
@@ -58,12 +51,6 @@ if (!empty($filter_status)) {
 }
 
 $sql .= " ORDER BY a.attendance_date DESC, s.username ASC";
-<<<<<<< HEAD
-=======
-
-// Debug: Uncomment the next line to see the actual query being executed
-// echo "SQL Query: " . $sql . "<br>Parameters: " . print_r($params, true) . "<br>";
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
 
 $stmt = $conn->prepare($sql);
 $attendance_records = [];
@@ -77,11 +64,11 @@ if ($stmt) {
             $attendance_records[] = $row;
         }
     } else {
-        echo "Error executing query: " . $stmt->error; // Enable for debugging
+        // echo "Error executing query: " . $stmt->error; // For debugging
     }
     $stmt->close();
 } else {
-    echo "Error preparing query: " . $conn->error; // Enable for debugging
+    // echo "Error preparing query: " . $conn->error; // For debugging
 }
 $conn->close();
 ?>
@@ -354,7 +341,7 @@ $conn->close();
                     <option value="">All Classes</option>
                     <?php foreach ($classes as $class_item): ?>
                         <option value="<?= htmlspecialchars($class_item) ?>" <?= ($filter_class == $class_item) ? 'selected' : '' ?>>
-                            <?= htmlspecialchars(ucwords(str_replace('_', ' ', $class_item ?? ''))) ?>
+                            <?= htmlspecialchars(ucwords(str_replace('_', ' ', $class_item))) ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
@@ -399,7 +386,7 @@ $conn->close();
                                 <td><?= htmlspecialchars(date("M d, Y", strtotime($record['attendance_date']))) ?></td>
                                 <td><?= htmlspecialchars($record['student_id']) ?></td>
                                 <td><?= htmlspecialchars($record['username']) ?></td>
-                                <td><?= htmlspecialchars(ucwords(str_replace('_', ' ', $record['class'] ?? ''))) ?></td>
+                                <td><?= htmlspecialchars(ucwords(str_replace('_', ' ', $record['class']))) ?></td>
                                 <td>
                                     <span class="status-badge status-<?= strtolower(htmlspecialchars($record['status'])) ?>">
                                         <?= htmlspecialchars($record['status']) ?>

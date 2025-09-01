@@ -12,29 +12,17 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'parent') {
 $user_id = $_SESSION['user_id'];
 
 // --- FETCH ALL CHILDREN ASSIGNED TO THIS PARENT ---
-// Fixed table name: student_parent_relationships instead of parent_student_relationships
 $childrenQuery = "
     SELECT DISTINCT
-<<<<<<< HEAD
-=======
-        s.student_id as student_internal_id,
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
         s.student_id,
         COALESCE(NULLIF(CONCAT_WS(' ', s.first_name, s.last_name), ''), s.username) AS student_name,
         s.first_name,
         s.last_name,
-<<<<<<< HEAD
         s.username,
         s.class,
         p.relationship
     FROM parents p
     INNER JOIN students s ON p.student_id = s.student_id
-=======
-        s.username
-    FROM student_parent_relationships spr
-    INNER JOIN parents p ON spr.parent_id = p.parent_id
-    INNER JOIN students s ON spr.student_id = s.student_id
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
     WHERE p.user_id = ?
     ORDER BY s.first_name, s.last_name";
 
@@ -136,30 +124,16 @@ if ($stmtResults) {
 $notifications = [];
 $unreadNotificationCount = 0;
 
-<<<<<<< HEAD
 // Try to fetch notifications from news table or create sample notifications
 try {
     $notificationsQuery = "SELECT news_title as message, created_at, 0 as is_read FROM news ORDER BY created_at DESC LIMIT 5";
     $stmtNotif = $conn->prepare($notificationsQuery);
     if ($stmtNotif) {
-=======
-// First try to get notifications from the notifications table (if it exists)
-try {
-    $notificationsQuery = "SELECT title, message, created_at, is_read FROM notifications WHERE user_id = ? AND user_type = 'student' ORDER BY created_at DESC LIMIT 5";
-    $stmtNotif = $conn->prepare($notificationsQuery);
-    if ($stmtNotif) {
-        $stmtNotif->bind_param("s", $student_id);
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
         $stmtNotif->execute();
         $notifResult = $stmtNotif->get_result();
         while ($row = $notifResult->fetch_assoc()) {
             $notifications[] = [
-<<<<<<< HEAD
                 'message' => 'News: ' . substr($row['message'], 0, 50) . '...',
-=======
-                'title' => $row['title'],
-                'message' => $row['message'],
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                 'created_at' => $row['created_at'],
                 'is_read' => $row['is_read']
             ];
@@ -169,7 +143,6 @@ try {
         }
         $stmtNotif->close();
     }
-<<<<<<< HEAD
 } catch (Exception $e) {
     // If news table doesn't exist or has wrong columns, create sample notifications
     $notifications = [
@@ -190,121 +163,11 @@ try {
         ]
     ];
     $unreadNotificationCount = 3;
-=======
-} catch (mysqli_sql_exception $e) {
-    // If notifications table doesn't exist, we'll skip it
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
 }
-
-// Try to get recent notices as notifications
-try {
-    $noticesQuery = "SELECT * FROM notices ORDER BY created_at DESC LIMIT 3";
-    $stmtNotices = $conn->prepare($noticesQuery);
-    if ($stmtNotices) {
-        $stmtNotices->execute();
-        $noticesResult = $stmtNotices->get_result();
-        while ($row = $noticesResult->fetch_assoc()) {
-            $title = 'School Notice';
-            $message = 'A new notice has been posted to the school board.';
-            
-            // Try to get actual content from various possible columns
-            if (isset($row['title']) && !empty(trim($row['title']))) {
-                $title = trim($row['title']);
-            } elseif (isset($row['subject']) && !empty(trim($row['subject']))) {
-                $title = trim($row['subject']);
-            }
-            
-            if (isset($row['content']) && !empty(trim($row['content']))) {
-                $message = strlen($row['content']) > 100 ? substr(trim($row['content']), 0, 100) . '...' : trim($row['content']);
-            } elseif (isset($row['description']) && !empty(trim($row['description']))) {
-                $message = strlen($row['description']) > 100 ? substr(trim($row['description']), 0, 100) . '...' : trim($row['description']);
-            } elseif (isset($row['message']) && !empty(trim($row['message']))) {
-                $message = strlen($row['message']) > 100 ? substr(trim($row['message']), 0, 100) . '...' : trim($row['message']);
-            }
-            
-            $notifications[] = [
-                'title' => $title,
-                'message' => $message,
-                'created_at' => $row['created_at'] ?? date('Y-m-d H:i:s'),
-                'is_read' => 1 // Assume notices are general and don't track read status
-            ];
-        }
-        $stmtNotices->close();
-    }
-} catch (mysqli_sql_exception $e) {
-    // If notices table has issues, skip it
-}
-
-// Try to get upcoming events
-try {
-    $eventsQuery = "SELECT * FROM events WHERE event_date >= CURDATE() ORDER BY event_date ASC LIMIT 2";
-    $stmtEvents = $conn->prepare($eventsQuery);
-    if ($stmtEvents) {
-        $stmtEvents->execute();
-        $eventsResult = $stmtEvents->get_result();
-        while ($row = $eventsResult->fetch_assoc()) {
-            $eventTitle = 'Upcoming School Event';
-            $eventMessage = 'There is an upcoming event at the school.';
-            
-            if (isset($row['title']) && !empty(trim($row['title']))) {
-                $eventTitle = trim($row['title']);
-            } elseif (isset($row['name']) && !empty(trim($row['name']))) {
-                $eventTitle = trim($row['name']);
-            } elseif (isset($row['event_name']) && !empty(trim($row['event_name']))) {
-                $eventTitle = trim($row['event_name']);
-            }
-            
-            $eventDate = $row['event_date'] ?? $row['date'] ?? date('Y-m-d');
-            $eventMessage = 'Scheduled for ' . date('l, F j, Y', strtotime($eventDate));
-            
-            if (isset($row['description']) && !empty(trim($row['description']))) {
-                $eventMessage .= ' - ' . (strlen($row['description']) > 80 ? substr(trim($row['description']), 0, 80) . '...' : trim($row['description']));
-            }
-            
-            $notifications[] = [
-                'title' => $eventTitle,
-                'message' => $eventMessage,
-                'created_at' => $row['created_at'] ?? $eventDate,
-                'is_read' => 1 // Assume events are general
-            ];
-        }
-        $stmtEvents->close();
-    }
-} catch (mysqli_sql_exception $e) {
-    // If events table has issues, skip it
-}
-
-// If we don't have any notifications, create some sample ones
-if (empty($notifications)) {
-    $notifications = [
-        [
-            'title' => 'Welcome to Parent Portal',
-            'message' => 'Welcome! Use this portal to track your child\'s academic progress, fee payments, and school updates.',
-            'created_at' => date('Y-m-d H:i:s'),
-            'is_read' => 0
-        ],
-        [
-            'title' => 'Academic Performance',
-            'message' => 'Check the overview cards above to see your child\'s current academic performance and fee status.',
-            'created_at' => date('Y-m-d H:i:s', strtotime('-1 hour')),
-            'is_read' => 1
-        ]
-    ];
-    $unreadNotificationCount = 1;
-}
-
-// Sort all notifications by date
-usort($notifications, function($a, $b) {
-    return strtotime($b['created_at']) - strtotime($a['created_at']);
-});
-
-// Limit to 10 total notifications
-$notifications = array_slice($notifications, 0, 10);
 
 // --- FETCH A UNIFIED LIST OF RECENT ACTIVITIES FOR THE TABLE ---
 $recentActivities = [];
 
-<<<<<<< HEAD
 // Try to get results data with proper error handling
 try {
     $activityQuery = "
@@ -358,161 +221,22 @@ if (empty($recentActivities)) {
             'status_type' => 'result'
         ]
     ];
-=======
-// Try to get results data with flexible column names
-try {
-    $resultsQuery = "
-        SELECT 
-            s.subject_name as subject, 
-            COALESCE(r.created_at, r.date_created, r.date, CURDATE()) as activity_date, 
-            'Result' as type, 
-            CONCAT(COALESCE(r.final_mark, r.marks, r.score, 0), '%') as status,
-            'result' as status_type
-        FROM results r
-        JOIN subjects s ON r.subject_id = s.subject_id
-        WHERE r.student_id = ?
-        ORDER BY activity_date DESC
-        LIMIT 3";
-
-    $stmtResults = $conn->prepare($resultsQuery);
-    if ($stmtResults) {
-        $stmtResults->bind_param("s", $student_id);
-        $stmtResults->execute();
-        $resultData = $stmtResults->get_result();
-        while($row = $resultData->fetch_assoc()){
-            $recentActivities[] = $row;
-        }
-        $stmtResults->close();
-    }
-} catch (mysqli_sql_exception $e) {
-    // If results query fails, try a simpler approach
-    try {
-        $simpleResultsQuery = "
-            SELECT 
-                'Academic Result' as subject, 
-                CURDATE() as activity_date, 
-                'Result' as type, 
-                CONCAT(COALESCE(final_mark, marks, score, 0), '%') as status,
-                'result' as status_type
-            FROM results 
-            WHERE student_id = ?
-            ORDER BY id DESC
-            LIMIT 2";
-        
-        $stmtSimpleResults = $conn->prepare($simpleResultsQuery);
-        if ($stmtSimpleResults) {
-            $stmtSimpleResults->bind_param("s", $student_id);
-            $stmtSimpleResults->execute();
-            $simpleResultData = $stmtSimpleResults->get_result();
-            while($row = $simpleResultData->fetch_assoc()){
-                $recentActivities[] = $row;
-            }
-            $stmtSimpleResults->close();
-        }
-    } catch (mysqli_sql_exception $e2) {
-        // Skip results if table structure is incompatible
-    }
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
 }
-
-// Try to get attendance data with flexible column names
-try {
-    $attendanceQuery = "
-        SELECT 
-            'Daily Attendance' as subject, 
-            COALESCE(a.date, a.attendance_date, a.created_at, CURDATE()) as activity_date, 
-            'Attendance' as type, 
-            COALESCE(a.status, a.attendance_status, 'Present') as status,
-            LOWER(COALESCE(a.status, a.attendance_status, 'present')) as status_type
-        FROM attendance a
-        WHERE a.student_id = ?
-        ORDER BY activity_date DESC
-        LIMIT 3";
-
-    $stmtAttendance = $conn->prepare($attendanceQuery);
-    if ($stmtAttendance) {
-        $stmtAttendance->bind_param("s", $student_id);
-        $stmtAttendance->execute();
-        $attendanceData = $stmtAttendance->get_result();
-        while($row = $attendanceData->fetch_assoc()){
-            $recentActivities[] = $row;
-        }
-        $stmtAttendance->close();
-    }
-} catch (mysqli_sql_exception $e) {
-    // Skip attendance if table structure is incompatible
-}
-
-// Try to get assignment/homework data if available
-try {
-    $assignmentsQuery = "
-        SELECT 
-            COALESCE(title, assignment_name, subject, 'Assignment') as subject, 
-            COALESCE(created_at, date_created, due_date, CURDATE()) as activity_date, 
-            'Assignment' as type, 
-            COALESCE(status, 'Assigned') as status,
-            LOWER(COALESCE(status, 'assigned')) as status_type
-        FROM assignments 
-        WHERE student_id = ? OR class_id IN (SELECT class_id FROM students WHERE student_id = ?)
-        ORDER BY activity_date DESC
-        LIMIT 2";
-
-    $stmtAssignments = $conn->prepare($assignmentsQuery);
-    if ($stmtAssignments) {
-        $stmtAssignments->bind_param("ss", $student_id, $student_id);
-        $stmtAssignments->execute();
-        $assignmentData = $stmtAssignments->get_result();
-        while($row = $assignmentData->fetch_assoc()){
-            $recentActivities[] = $row;
-        }
-        $stmtAssignments->close();
-    }
-} catch (mysqli_sql_exception $e) {
-    // Skip assignments if table doesn't exist or structure is incompatible
-}
-
-// If no activities found, create some sample data
-if (empty($recentActivities)) {
-    $recentActivities = [
-        [
-            'subject' => 'Mathematics',
-            'activity_date' => date('Y-m-d', strtotime('-2 days')),
-            'type' => 'Result',
-            'status' => '85%',
-            'status_type' => 'result'
-        ],
-        [
-            'subject' => 'Daily Attendance',
-            'activity_date' => date('Y-m-d', strtotime('-1 day')),
-            'type' => 'Attendance',
-            'status' => 'Present',
-            'status_type' => 'present'
-        ],
-        [
-            'subject' => 'English',
-            'activity_date' => date('Y-m-d'),
-            'type' => 'Result',
-            'status' => '92%',
-            'status_type' => 'result'
-        ]
-    ];
-}
-
-// Sort activities by date and limit to 5
-usort($recentActivities, function($a, $b) {
-    return strtotime($b['activity_date']) - strtotime($a['activity_date']);
-});
-$recentActivities = array_slice($recentActivities, 0, 5);
 
 $conn->close();
 
 function time_ago($datetime) {
-    try {
-        $date = new DateTime($datetime);
-        return $date->format('M j, Y \a\t g:i A');
-    } catch (Exception $e) {
-        return date('M j, Y \a\t g:i A');
+    $now = new DateTime;
+    $ago = new DateTime($datetime);
+    $diff = $now->diff($ago);
+    $diff->w = floor($diff->d / 7);
+    $diff->d -= $diff->w * 7;
+    $string = ['y' => 'year','m' => 'month','w' => 'week','d' => 'day','h' => 'hour','i' => 'minute','s' => 'second'];
+    foreach ($string as $k => &$v) {
+        if ($diff->$k) $v = $diff->$k . ' ' . $v . ($diff->$k > 1 ? 's' : '');
+        else unset($string[$k]);
     }
+    return $string ? implode(', ', $string) . ' ago' : 'just now';
 }
 ?>
 
@@ -1518,7 +1242,6 @@ function time_ago($datetime) {
                         </div>
                         <?php endif; ?>
                     </div>
-<<<<<<< HEAD
                     <div class="header-actions">
                         <div class="user-profile">
                             <div style="position: relative;">
@@ -1548,32 +1271,6 @@ function time_ago($datetime) {
                                                 <div style="text-align: center;">
                                                     <i class="fas fa-bell-slash" style="font-size: 2rem; opacity: 0.3; margin-bottom: 0.5rem;"></i>
                                                     <p>No new notifications.</p>
-=======
-                    <?php endif; ?>
-                </div>
-                <div class="header-actions">
-                    <div class="user-profile">
-                        <div style="position: relative;">
-                            <button class="icon-button" id="notificationBell">
-                                <i class="fas fa-bell"></i>
-                                <?php if ($unreadNotificationCount > 0): ?>
-                                    <span class="notification-badge"><?php echo $unreadNotificationCount; ?></span>
-                                <?php endif; ?>
-                            </button>
-                            <div class="notification-dropdown" id="notificationDropdown">
-                                <div class="notification-dropdown-header">
-                                    <h4>Notifications for <?= htmlspecialchars($student_name) ?></h4>
-                                </div>
-                                <ul class="notification-list">
-                                    <?php if (!empty($notifications)): ?>
-                                        <?php foreach ($notifications as $notif): ?>
-                                            <li class="<?php echo $notif['is_read'] ? 'read' : 'unread'; ?>">
-                                                <div class="icon"><i class="fas fa-info-circle"></i></div>
-                                                <div class="message">
-                                                    <p><strong><?php echo htmlspecialchars($notif['title'] ?? 'Notification'); ?></strong></p>
-                                                    <p style="margin-top: 4px; color: var(--text-dark); font-weight: normal;"><?php echo htmlspecialchars($notif['message'] ?? 'No message available'); ?></p>
-                                                    <span><?php echo time_ago($notif['created_at']); ?></span>
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                                                 </div>
                                             </li>
                                         <?php endif; ?>

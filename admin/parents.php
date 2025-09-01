@@ -21,7 +21,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_relationship'])) {
     $is_primary = isset($_POST['is_primary_contact']) ? 1 : 0;
     $is_emergency = isset($_POST['is_emergency_contact']) ? 1 : 0;
     $can_pick_up = isset($_POST['can_pick_up']) ? 1 : 0;
-<<<<<<< HEAD
     $notes = $_POST['notes'] ?? '';
     
     $insertQuery = "INSERT INTO student_parent_relationships 
@@ -34,131 +33,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_relationship'])) {
         $_SESSION['success_message'] = "Student-parent relationship added successfully!";
     } else {
         $_SESSION['error_message'] = "Error adding relationship: " . $conn->error;
-=======
-    $notes = $_POST['notes'];
-    
-    // Check if the table has an id column that needs a value
-    $tableStructure = $conn->query("SHOW COLUMNS FROM student_parent_relationships");
-    $columns = [];
-    $hasIdColumn = false;
-    $idColumnInfo = null;
-    
-    while ($column = $tableStructure->fetch_assoc()) {
-        $columns[] = $column['Field'];
-        if ($column['Field'] === 'id') {
-            $hasIdColumn = true;
-            $idColumnInfo = $column;
-        }
-    }
-    
-    // Build dynamic insert query based on available columns
-    $insertColumns = [];
-    $insertValues = [];
-    $insertParams = [];
-    $paramTypes = '';
-    
-    // Handle id column if it exists and doesn't auto-increment
-    if ($hasIdColumn && 
-        $idColumnInfo && 
-        strpos($idColumnInfo['Extra'], 'auto_increment') === false && 
-        $idColumnInfo['Default'] === null && 
-        $idColumnInfo['Null'] === 'NO') {
-        
-        // Generate next ID manually
-        $maxIdResult = $conn->query("SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM student_parent_relationships");
-        if ($maxIdResult) {
-            $nextId = $maxIdResult->fetch_assoc()['next_id'];
-            $insertColumns[] = 'id';
-            $insertValues[] = '?';
-            $insertParams[] = $nextId;
-            $paramTypes .= 'i';
-        }
-    }
-    
-    // Add other columns based on what exists
-    if (in_array('student_id', $columns)) {
-        $insertColumns[] = 'student_id';
-        $insertValues[] = '?';
-        $insertParams[] = $student_id;
-        $paramTypes .= 's';
-    }
-    
-    if (in_array('parent_id', $columns)) {
-        $insertColumns[] = 'parent_id';
-        $insertValues[] = '?';
-        $insertParams[] = $parent_id;
-        $paramTypes .= 'i';
-    }
-    
-    if (in_array('relationship_type', $columns)) {
-        $insertColumns[] = 'relationship_type';
-        $insertValues[] = '?';
-        $insertParams[] = $relationship_type;
-        $paramTypes .= 's';
-    }
-    
-    if (in_array('is_primary_contact', $columns)) {
-        $insertColumns[] = 'is_primary_contact';
-        $insertValues[] = '?';
-        $insertParams[] = $is_primary;
-        $paramTypes .= 'i';
-    }
-    
-    if (in_array('is_emergency_contact', $columns)) {
-        $insertColumns[] = 'is_emergency_contact';
-        $insertValues[] = '?';
-        $insertParams[] = $is_emergency;
-        $paramTypes .= 'i';
-    }
-    
-    if (in_array('can_pick_up', $columns)) {
-        $insertColumns[] = 'can_pick_up';
-        $insertValues[] = '?';
-        $insertParams[] = $can_pick_up;
-        $paramTypes .= 'i';
-    }
-    
-    if (in_array('notes', $columns)) {
-        $insertColumns[] = 'notes';
-        $insertValues[] = '?';
-        $insertParams[] = $notes;
-        $paramTypes .= 's';
-    }
-    
-    if (in_array('created_by', $columns)) {
-        $insertColumns[] = 'created_by';
-        $insertValues[] = '?';
-        $insertParams[] = $_SESSION['user_id'];
-        $paramTypes .= 'i';
-    }
-    
-    if (in_array('created_at', $columns)) {
-        $insertColumns[] = 'created_at';
-        $insertValues[] = 'NOW()';
-    }
-    
-    // Execute the insert if we have columns to insert
-    if (!empty($insertColumns)) {
-        $insertQuery = "INSERT INTO student_parent_relationships (" . implode(', ', $insertColumns) . ") VALUES (" . implode(', ', $insertValues) . ")";
-        $stmt = $conn->prepare($insertQuery);
-        
-        if ($stmt) {
-            if (!empty($insertParams)) {
-                $stmt->bind_param($paramTypes, ...$insertParams);
-            }
-            
-            if ($stmt->execute()) {
-                $_SESSION['success_message'] = "Student-parent relationship added successfully!";
-            } else {
-                $_SESSION['error_message'] = "Error adding relationship: " . $stmt->error;
-            }
-            $stmt->close();
-        } else {
-            $_SESSION['error_message'] = "Error preparing query: " . $conn->error;
-        }
-    } else {
-        $_SESSION['error_message'] = "No valid columns found for insertion";
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
     }
     
     header("Location: parents.php");
@@ -187,30 +61,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['remove_relationship'])
 $tableCheck = $conn->query("SHOW TABLES LIKE 'student_parent_relationships'");
 $relationshipTableExists = $tableCheck->num_rows > 0;
 
-<<<<<<< HEAD
 if ($relationshipTableExists) {
     // Fetch all parents with their relationships using direct joins
-=======
-// Check students table structure to get correct primary key
-$studentsColumnsQuery = "SHOW COLUMNS FROM students";
-$studentsColumnsResult = $conn->query($studentsColumnsQuery);
-$studentsPrimaryKey = 'student_id'; // Default assumption
-
-if ($studentsColumnsResult) {
-    while ($row = $studentsColumnsResult->fetch_assoc()) {
-        if ($row['Key'] === 'PRI') {
-            $studentsPrimaryKey = $row['Field'];
-            break;
-        }
-    }
-}
-
-if ($relationshipTableExists) {
-    // First, let's temporarily disable ONLY_FULL_GROUP_BY for this session
-    $conn->query("SET sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''))");
-    
-    // Alternative approach: Use subqueries to avoid GROUP BY issues
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
     $parentsQuery = "
         SELECT 
             p.parent_id, 
@@ -220,7 +72,6 @@ if ($relationshipTableExists) {
             p.created_at, 
             u.username, 
             u.email,
-<<<<<<< HEAD
             u.first_name as parent_first_name,
             u.last_name as parent_last_name,
             GROUP_CONCAT(DISTINCT 
@@ -245,24 +96,6 @@ if ($relationshipTableExists) {
         LEFT JOIN student_parent_relationships spr ON p.parent_id = spr.parent_id
         LEFT JOIN students s ON spr.student_id = s.student_id
         GROUP BY p.parent_id
-=======
-            (SELECT GROUP_CONCAT(DISTINCT CONCAT(s.first_name, ' ', s.last_name) SEPARATOR ', ')
-             FROM student_parent_relationships spr2 
-             JOIN students s ON spr2.student_id = s.$studentsPrimaryKey 
-             WHERE spr2.parent_id = p.parent_id) as student_names,
-            (SELECT GROUP_CONCAT(DISTINCT s.$studentsPrimaryKey SEPARATOR ', ')
-             FROM student_parent_relationships spr3 
-             JOIN students s ON spr3.student_id = s.$studentsPrimaryKey 
-             WHERE spr3.parent_id = p.parent_id) as student_numbers,
-            (SELECT GROUP_CONCAT(DISTINCT spr4.relationship_type SEPARATOR ', ')
-             FROM student_parent_relationships spr4 
-             WHERE spr4.parent_id = p.parent_id) as relationships,
-            (SELECT COUNT(DISTINCT spr5.student_id)
-             FROM student_parent_relationships spr5 
-             WHERE spr5.parent_id = p.parent_id) as student_count
-        FROM parents p
-        LEFT JOIN users u ON p.user_id = u.id
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
         ORDER BY p.created_at DESC";
         
     // Fetch all relationships for detailed view
@@ -272,7 +105,6 @@ if ($relationshipTableExists) {
             spr.student_id,
             spr.parent_id,
             spr.relationship_type,
-<<<<<<< HEAD
             spr.is_primary_contact,
             spr.is_emergency_contact,
             spr.can_pick_up,
@@ -293,25 +125,6 @@ if ($relationshipTableExists) {
         LEFT JOIN parents p ON spr.parent_id = p.parent_id
         LEFT JOIN users u ON p.user_id = u.id
         ORDER BY s.student_id, spr.relationship_type";
-=======
-            COALESCE(spr.is_primary_contact, 0) as is_primary_contact,
-            COALESCE(spr.is_emergency_contact, 0) as is_emergency_contact,
-            COALESCE(spr.can_pick_up, 0) as can_pick_up,
-            spr.notes,
-            spr.created_at,
-            s.$studentsPrimaryKey as student_number,
-            s.first_name as student_first_name,
-            s.last_name as student_last_name,
-            s.class as student_class,
-            p.phone_number as parent_phone,
-            u.username as parent_username,
-            u.email as parent_email
-        FROM student_parent_relationships spr
-        LEFT JOIN students s ON spr.student_id = s.$studentsPrimaryKey
-        LEFT JOIN parents p ON spr.parent_id = p.parent_id
-        LEFT JOIN users u ON p.user_id = u.id
-        ORDER BY s.first_name, s.last_name, spr.relationship_type";
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
 } else {
     // Fallback to original structure if relationship table doesn't exist
     $parentsQuery = "
@@ -324,7 +137,6 @@ if ($relationshipTableExists) {
             p.student_id,
             u.username, 
             u.email,
-<<<<<<< HEAD
             u.first_name as parent_first_name,
             u.last_name as parent_last_name,
             s.first_name as student_first_name, 
@@ -333,14 +145,6 @@ if ($relationshipTableExists) {
         FROM parents p
         LEFT JOIN users u ON p.user_id = u.id
         LEFT JOIN students s ON p.student_id = s.student_id
-=======
-            s.first_name as student_first_name, 
-            s.last_name as student_last_name,
-            s.$studentsPrimaryKey as student_table_id
-        FROM parents p
-        LEFT JOIN users u ON p.user_id = u.id
-        LEFT JOIN students s ON p.student_id = s.$studentsPrimaryKey
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
         ORDER BY p.created_at DESC";
     
     $relationshipsQuery = null; // No relationships table
@@ -349,16 +153,12 @@ if ($relationshipTableExists) {
 $parentsResult = $conn->query($parentsQuery);
 
 // Fetch students for the add relationship form
-<<<<<<< HEAD
 $studentsQuery = "SELECT student_id, first_name, last_name, username, class FROM students ORDER BY 
     CASE 
         WHEN first_name IS NOT NULL AND first_name != '' THEN first_name
         WHEN username IS NOT NULL AND username != '' THEN username
         ELSE student_id
     END";
-=======
-$studentsQuery = "SELECT $studentsPrimaryKey as student_id, first_name, last_name, class FROM students ORDER BY first_name, last_name";
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
 $studentsResult = $conn->query($studentsQuery);
 
 // Fetch relationships if table exists
@@ -432,8 +232,6 @@ if (!$parentsResult || !$studentsResult) {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 1rem;
         }
 
         .logo {
@@ -457,7 +255,6 @@ if (!$parentsResult || !$studentsResult) {
             display: flex;
             gap: 1rem;
             align-items: center;
-            flex-wrap: wrap;
         }
 
         .btn {
@@ -473,7 +270,6 @@ if (!$parentsResult || !$studentsResult) {
             border: none;
             cursor: pointer;
             font-size: 0.95rem;
-            white-space: nowrap;
         }
 
         .btn-primary {
@@ -623,8 +419,6 @@ if (!$parentsResult || !$studentsResult) {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 1rem;
         }
 
         .card-header h2 {
@@ -635,13 +429,11 @@ if (!$parentsResult || !$studentsResult) {
 
         .table-container {
             overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
         }
 
         .table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 800px;
         }
 
         .table th,
@@ -649,7 +441,6 @@ if (!$parentsResult || !$studentsResult) {
             padding: 1rem;
             text-align: left;
             border-bottom: 1px solid var(--gray-200);
-            vertical-align: top;
         }
 
         .table th {
@@ -670,7 +461,6 @@ if (!$parentsResult || !$studentsResult) {
             font-size: 0.75rem;
             font-weight: 600;
             text-transform: uppercase;
-            margin: 0.125rem;
         }
 
         .badge-father {
@@ -746,10 +536,6 @@ if (!$parentsResult || !$studentsResult) {
             display: flex;
             gap: 1rem;
             margin-bottom: 2rem;
-<<<<<<< HEAD
-=======
-            flex-wrap: wrap;
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
         }
 
         .tab {
@@ -758,10 +544,6 @@ if (!$parentsResult || !$studentsResult) {
             border-radius: var(--border-radius);
             cursor: pointer;
             transition: var(--transition);
-<<<<<<< HEAD
-=======
-            white-space: nowrap;
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
         }
 
         .tab.active {
@@ -777,92 +559,23 @@ if (!$parentsResult || !$studentsResult) {
             display: block;
         }
 
-        /* Mobile Responsive Styles */
         @media screen and (max-width: 768px) {
-            .header {
-                padding: 1rem;
-            }
-
             .header-container {
                 flex-direction: column;
                 gap: 1rem;
-                text-align: center;
             }
 
             .header-actions {
                 flex-wrap: wrap;
                 justify-content: center;
-                width: 100%;
-            }
-
-            .btn {
-                padding: 0.5rem 1rem;
-                font-size: 0.875rem;
-            }
-
-            main {
-                margin: 1rem auto;
-                padding: 0 1rem;
-            }
-
-            .page-header {
-                padding: 1.5rem 1rem;
-                margin-bottom: 1.5rem;
             }
 
             .page-header h1 {
                 font-size: 2rem;
             }
 
-            .page-header p {
-                font-size: 1rem;
-            }
-
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
-<<<<<<< HEAD
-=======
-                gap: 1rem;
-                margin-bottom: 1.5rem;
-            }
-
-            .stat-card {
-                padding: 1rem;
-            }
-
-            .stat-card i {
-                font-size: 2rem;
-                margin-bottom: 0.75rem;
-            }
-
-            .stat-card h3 {
-                font-size: 1.5rem;
-                margin-bottom: 0.25rem;
-            }
-
-            .stat-card p {
-                font-size: 0.875rem;
-            }
-
-            .card-header {
-                padding: 1rem;
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 0.75rem;
-            }
-
-            .card-header h2 {
-                font-size: 1.25rem;
-            }
-
-            .table-container {
-                margin: 0 -1rem;
-                padding: 0 1rem;
-            }
-
-            .table {
-                min-width: 600px;
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
             }
 
             .table th,
@@ -873,108 +586,7 @@ if (!$parentsResult || !$studentsResult) {
 
             .tabs {
                 flex-direction: column;
-                gap: 0.5rem;
-                margin-bottom: 1.5rem;
             }
-<<<<<<< HEAD
-=======
-
-            .tab {
-                text-align: center;
-                padding: 0.875rem 1rem;
-            }
-
-            .form-container {
-                padding: 1.5rem 1rem;
-                margin-bottom: 1.5rem;
-            }
-
-            .checkbox-group {
-                flex-direction: column;
-                gap: 0.75rem;
-            }
-
-            .badge {
-                font-size: 0.7rem;
-                padding: 0.2rem 0.6rem;
-            }
-        }
-
-        /* Tablet Styles */
-        @media screen and (min-width: 769px) and (max-width: 1024px) {
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .table th,
-            .table td {
-                padding: 0.875rem 0.75rem;
-                font-size: 0.9rem;
-            }
-        }
-
-        /* Large Screen Optimizations */
-        @media screen and (min-width: 1200px) {
-            .stats-grid {
-                grid-template-columns: repeat(4, 1fr);
-            }
-
-            .table {
-                min-width: 1000px;
-            }
-        }
-
-        /* Print Styles */
-        @media print {
-            .header-actions,
-            .tabs,
-            .btn {
-                display: none !important;
-            }
-
-            .content-card {
-                box-shadow: none;
-                border: 1px solid #ccc;
-                break-inside: avoid;
-            }
-
-            .table {
-                font-size: 12px;
-            }
-
-            .page-header h1 {
-                font-size: 1.5rem;
-            }
-        }
-
-        /* Accessibility */
-        .btn:focus,
-        .tab:focus,
-        input:focus,
-        select:focus,
-        textarea:focus {
-            outline: 2px solid var(--primary-color);
-            outline-offset: 2px;
-        }
-
-        /* Table scroll indicator */
-        .table-container::-webkit-scrollbar {
-            height: 8px;
-        }
-
-        .table-container::-webkit-scrollbar-track {
-            background: var(--gray-100);
-            border-radius: 4px;
-        }
-
-        .table-container::-webkit-scrollbar-thumb {
-            background: var(--gray-300);
-            border-radius: 4px;
-        }
-
-        .table-container::-webkit-scrollbar-thumb:hover {
-            background: var(--gray-400);
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
         }
     </style>
 </head>
@@ -1012,22 +624,14 @@ if (!$parentsResult || !$studentsResult) {
         <?php if (isset($_SESSION['success_message'])): ?>
             <div class="alert alert-success">
                 <i class="fas fa-check-circle"></i>
-<<<<<<< HEAD
                 <?= safe_html($_SESSION['success_message']); unset($_SESSION['success_message']); ?>
-=======
-                <?= $_SESSION['success_message']; unset($_SESSION['success_message']); ?>
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
             </div>
         <?php endif; ?>
 
         <?php if (isset($_SESSION['error_message'])): ?>
             <div class="alert alert-error">
                 <i class="fas fa-exclamation-circle"></i>
-<<<<<<< HEAD
                 <?= safe_html($_SESSION['error_message']); unset($_SESSION['error_message']); ?>
-=======
-                <?= $_SESSION['error_message']; unset($_SESSION['error_message']); ?>
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
             </div>
         <?php endif; ?>
 
@@ -1130,7 +734,6 @@ if (!$parentsResult || !$studentsResult) {
                         </thead>
                         <tbody>
                             <?php 
-<<<<<<< HEAD
                             $parentsResult->data_seek(0);
                             while ($parent = $parentsResult->fetch_assoc()): 
                             ?>
@@ -1154,67 +757,32 @@ if (!$parentsResult || !$studentsResult) {
                                             <?php if ($parent['email']): ?>
                                                 <div style="font-size: 0.875rem; color: var(--muted-text);">
                                                     <?= safe_html($parent['email']) ?>
-=======
-                            if ($parentsResult && $parentsResult->num_rows > 0) {
-                                $parentsResult->data_seek(0);
-                                while ($parent = $parentsResult->fetch_assoc()): 
-                            ?>
-                                <tr>
-                                    <td><strong><?= htmlspecialchars($parent['parent_id']) ?></strong></td>
-                                    <td>
-                                        <div>
-                                            <i class="fas fa-user"></i>
-                                            <strong><?= htmlspecialchars($parent['username'] ?: 'Parent ID: ' . $parent['parent_id']) ?></strong>
-                                            <?php if (!empty($parent['email'])): ?>
-                                                <div style="font-size: 0.875rem; color: var(--muted-text);">
-                                                    <?= htmlspecialchars($parent['email']) ?>
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                                                 </div>
                                             <?php endif; ?>
                                         </div>
                                     </td>
                                     <td>
-<<<<<<< HEAD
                                         <?php if ($parent['phone_number']): ?>
                                             <div><i class="fas fa-phone"></i> <?= safe_html($parent['phone_number']) ?></div>
                                         <?php endif; ?>
                                         <?php if ($parent['address']): ?>
                                             <div><i class="fas fa-map-marker-alt"></i> <?= safe_html(substr($parent['address'], 0, 30)) ?>...</div>
-=======
-                                        <?php if (!empty($parent['phone_number'])): ?>
-                                            <div><i class="fas fa-phone"></i> <?= htmlspecialchars($parent['phone_number']) ?></div>
-                                        <?php endif; ?>
-                                        <?php if (!empty($parent['address'])): ?>
-                                            <div><i class="fas fa-map-marker-alt"></i> <?= htmlspecialchars(substr($parent['address'], 0, 30)) ?>...</div>
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                                         <?php endif; ?>
                                     </td>
                                     <td>
                                         <?php 
                                         if ($relationshipTableExists && isset($parent['student_names']) && $parent['student_names']): 
                                         ?>
-<<<<<<< HEAD
                                             <div><?= safe_html($parent['student_names']) ?></div>
                                             <div style="font-size: 0.8rem; color: var(--muted-text);">
                                                 IDs: <?= safe_html($parent['student_numbers']) ?>
-=======
-                                            <div><?= htmlspecialchars($parent['student_names']) ?></div>
-                                            <div style="font-size: 0.8rem; color: var(--muted-text);">
-                                                IDs: <?= htmlspecialchars($parent['student_numbers']) ?>
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                                             </div>
                                         <?php 
                                         elseif (!$relationshipTableExists && isset($parent['student_first_name']) && $parent['student_first_name']): 
                                         ?>
-<<<<<<< HEAD
                                             <div><?= safe_html($parent['student_first_name'] . ' ' . $parent['student_last_name']) ?></div>
                                             <div style="font-size: 0.8rem; color: var(--muted-text);">
                                                 ID: <?= safe_html($parent['student_table_id']) ?>
-=======
-                                            <div><?= htmlspecialchars($parent['student_first_name'] . ' ' . $parent['student_last_name']) ?></div>
-                                            <div style="font-size: 0.8rem; color: var(--muted-text);">
-                                                ID: <?= htmlspecialchars($parent['student_table_id']) ?>
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                                             </div>
                                         <?php else: ?>
                                             <span style="color: var(--muted-text);">No students</span>
@@ -1233,11 +801,7 @@ if (!$parentsResult || !$studentsResult) {
                                                     case 'guardian': $badgeClass = 'badge-guardian'; break;
                                                 }
                                             ?>
-<<<<<<< HEAD
                                                 <span class="badge <?= $badgeClass ?>"><?= safe_html($rel) ?></span>
-=======
-                                                <span class="badge <?= $badgeClass ?>"><?= htmlspecialchars($rel) ?></span>
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                                             <?php endforeach; ?>
                                         <?php else: ?>
                                             <span style="color: var(--muted-text);">No relationships</span>
@@ -1250,12 +814,7 @@ if (!$parentsResult || !$studentsResult) {
                                         </a>
                                     </td>
                                 </tr>
-                            <?php 
-                                endwhile;
-                            } else {
-                                echo '<tr><td colspan="' . ($relationshipTableExists ? '6' : '5') . '"><div style="text-align: center; padding: 2rem; color: var(--muted-text);">No parents found</div></td></tr>';
-                            }
-                            ?>
+                            <?php endwhile; ?>
                         </tbody>
                     </table>
                 </div>
@@ -1288,19 +847,12 @@ if (!$parentsResult || !$studentsResult) {
                         </thead>
                         <tbody>
                             <?php 
-<<<<<<< HEAD
                             $relationshipsResult->data_seek(0);
                             while ($rel = $relationshipsResult->fetch_assoc()): 
-=======
-                            if ($relationshipsResult && $relationshipsResult->num_rows > 0) {
-                                $relationshipsResult->data_seek(0);
-                                while ($rel = $relationshipsResult->fetch_assoc()): 
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                             ?>
                                 <tr>
                                     <td>
                                         <div>
-<<<<<<< HEAD
                                             <?php 
                                             // Build student name with fallback logic
                                             $studentName = '';
@@ -1319,17 +871,11 @@ if (!$parentsResult || !$studentsResult) {
                                             <strong><?= safe_html($studentName) ?></strong>
                                             <div style="font-size: 0.8rem; color: var(--muted-text);">
                                                 ID: <?= safe_html($rel['student_number'] ?? $rel['student_id']) ?> | Class: <?= safe_html($rel['student_class'], 'N/A') ?>
-=======
-                                            <strong><?= htmlspecialchars(($rel['student_first_name'] ?? '') . ' ' . ($rel['student_last_name'] ?? '')) ?></strong>
-                                            <div style="font-size: 0.8rem; color: var(--muted-text);">
-                                                ID: <?= htmlspecialchars($rel['student_number'] ?? '') ?> | Class: <?= htmlspecialchars($rel['student_class'] ?? '') ?>
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                                             </div>
                                         </div>
                                     </td>
                                     <td>
                                         <div>
-<<<<<<< HEAD
                                             <strong>
                                                 <?php 
                                                 $parentName = '';
@@ -1345,12 +891,6 @@ if (!$parentsResult || !$studentsResult) {
                                             <?php if ($rel['parent_phone']): ?>
                                                 <div style="font-size: 0.8rem; color: var(--muted-text);">
                                                     <i class="fas fa-phone"></i> <?= safe_html($rel['parent_phone']) ?>
-=======
-                                            <strong><?= htmlspecialchars($rel['parent_username'] ?: 'Parent ID: ' . $rel['parent_id']) ?></strong>
-                                            <?php if (!empty($rel['parent_phone'])): ?>
-                                                <div style="font-size: 0.8rem; color: var(--muted-text);">
-                                                    <i class="fas fa-phone"></i> <?= htmlspecialchars($rel['parent_phone']) ?>
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                                                 </div>
                                             <?php endif; ?>
                                         </div>
@@ -1364,7 +904,6 @@ if (!$parentsResult || !$studentsResult) {
                                             case 'guardian': $badgeClass = 'badge-guardian'; break;
                                         }
                                         ?>
-<<<<<<< HEAD
                                         <span class="badge <?= $badgeClass ?>"><?= safe_html($rel['relationship_type']) ?></span>
                                     </td>
                                     <td>
@@ -1373,27 +912,13 @@ if (!$parentsResult || !$studentsResult) {
                                                 <span class="badge" style="background-color: #fee2e2; color: #991b1b;">Primary</span>
                                             <?php endif; ?>
                                             <?php if ($rel['is_emergency_contact']): ?>
-=======
-                                        <span class="badge <?= $badgeClass ?>"><?= htmlspecialchars($rel['relationship_type'] ?? '') ?></span>
-                                    </td>
-                                    <td>
-                                        <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                                            <?php if (!empty($rel['is_primary_contact'])): ?>
-                                                <span class="badge" style="background-color: #fee2e2; color: #991b1b;">Primary</span>
-                                            <?php endif; ?>
-                                            <?php if (!empty($rel['is_emergency_contact'])): ?>
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                                                 <span class="badge" style="background-color: #fef3c7; color: #92400e;">Emergency</span>
                                             <?php endif; ?>
                                         </div>
                                     </td>
                                     <td>
                                         <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-<<<<<<< HEAD
                                             <?php if ($rel['can_pick_up']): ?>
-=======
-                                            <?php if (!empty($rel['can_pick_up'])): ?>
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                                                 <span class="badge" style="background-color: #d1fae5; color: #065f46;">Can Pick Up</span>
                                             <?php else: ?>
                                                 <span class="badge" style="background-color: #fee2e2; color: #991b1b;">No Pick Up</span>
@@ -1402,20 +927,12 @@ if (!$parentsResult || !$studentsResult) {
                                     </td>
                                     <td>
                                         <div style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;">
-<<<<<<< HEAD
                                             <?= safe_html($rel['notes'] ?? 'No notes') ?>
-=======
-                                            <?= htmlspecialchars($rel['notes'] ?: 'No notes') ?>
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                                         </div>
                                     </td>
                                     <td>
                                         <form method="POST" style="display: inline;">
-<<<<<<< HEAD
                                             <input type="hidden" name="relationship_id" value="<?= $rel['relationship_id'] ?>">
-=======
-                                            <input type="hidden" name="relationship_id" value="<?= htmlspecialchars($rel['relationship_id']) ?>">
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                                             <button type="submit" name="remove_relationship" class="btn btn-error btn-sm" 
                                                     onclick="return confirm('Remove this relationship?')">
                                                 <i class="fas fa-trash"></i>
@@ -1423,16 +940,7 @@ if (!$parentsResult || !$studentsResult) {
                                         </form>
                                     </td>
                                 </tr>
-<<<<<<< HEAD
                             <?php endwhile; ?>
-=======
-                            <?php 
-                                endwhile;
-                            } else {
-                                echo '<tr><td colspan="7"><div style="text-align: center; padding: 2rem; color: var(--muted-text);">No relationships found</div></td></tr>';
-                            }
-                            ?>
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                         </tbody>
                     </table>
                 </div>
@@ -1452,7 +960,6 @@ if (!$parentsResult || !$studentsResult) {
                             <select name="student_id" id="student_id" required>
                                 <option value="">Choose a student...</option>
                                 <?php 
-<<<<<<< HEAD
                                 $studentsResult->data_seek(0);
                                 while ($student = $studentsResult->fetch_assoc()): 
                                     // Build student display name with fallback logic
@@ -1474,20 +981,6 @@ if (!$parentsResult || !$studentsResult) {
                                         (ID: <?= safe_html($student['student_id']) ?>, Class: <?= safe_html($student['class'], 'N/A') ?>)
                                     </option>
                                 <?php endwhile; ?>
-=======
-                                if ($studentsResult && $studentsResult->num_rows > 0) {
-                                    $studentsResult->data_seek(0);
-                                    while ($student = $studentsResult->fetch_assoc()): 
-                                ?>
-                                    <option value="<?= htmlspecialchars($student['student_id']) ?>">
-                                        <?= htmlspecialchars(($student['first_name'] ?? '') . ' ' . ($student['last_name'] ?? '')) ?> 
-                                        (ID: <?= htmlspecialchars($student['student_id']) ?>, Class: <?= htmlspecialchars($student['class'] ?? 'N/A') ?>)
-                                    </option>
-                                <?php 
-                                    endwhile;
-                                }
-                                ?>
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                             </select>
                         </div>
 
@@ -1496,7 +989,6 @@ if (!$parentsResult || !$studentsResult) {
                             <select name="parent_id" id="parent_id" required>
                                 <option value="">Choose a parent...</option>
                                 <?php 
-<<<<<<< HEAD
                                 $parentsResult->data_seek(0);
                                 while ($parent = $parentsResult->fetch_assoc()): 
                                     $parentName = '';
@@ -1514,22 +1006,6 @@ if (!$parentsResult || !$studentsResult) {
                                         <?php endif; ?>
                                     </option>
                                 <?php endwhile; ?>
-=======
-                                if ($parentsResult && $parentsResult->num_rows > 0) {
-                                    $parentsResult->data_seek(0);
-                                    while ($parent = $parentsResult->fetch_assoc()): 
-                                ?>
-                                    <option value="<?= htmlspecialchars($parent['parent_id']) ?>">
-                                        <?= htmlspecialchars($parent['username'] ?: 'Parent ID: ' . $parent['parent_id']) ?>
-                                        <?php if (!empty($parent['phone_number'])): ?>
-                                            (<?= htmlspecialchars($parent['phone_number']) ?>)
-                                        <?php endif; ?>
-                                    </option>
-                                <?php 
-                                    endwhile;
-                                }
-                                ?>
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                             </select>
                         </div>
 
@@ -1595,14 +1071,7 @@ if (!$parentsResult || !$studentsResult) {
             });
             
             // Show selected tab content
-<<<<<<< HEAD
             document.getElementById(tabName + '-tab').classList.add('active');
-=======
-            const targetTab = document.getElementById(tabName + '-tab');
-            if (targetTab) {
-                targetTab.classList.add('active');
-            }
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
             
             // Add active class to clicked tab
             event.target.closest('.tab').classList.add('active');

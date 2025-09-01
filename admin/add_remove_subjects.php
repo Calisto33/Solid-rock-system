@@ -164,11 +164,7 @@ function getCurrentSubjects($conn, $student_id) {
         if ($result && $result->num_rows > 0) {
             $query = "SELECT subject_id FROM $table WHERE student_id = ?";
             $stmt = $conn->prepare($query);
-<<<<<<< HEAD
             $stmt->bind_param("i", $student_id);
-=======
-            $stmt->bind_param("s", $student_id);
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
             $stmt->execute();
             $result = $stmt->get_result();
             $subjects = [];
@@ -378,11 +374,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 // Check if student is already enrolled in this subject
                 $checkQuery = "SELECT COUNT(*) as count FROM $relationshipTable WHERE student_id = ? AND subject_id = ?";
                 $stmt = $conn->prepare($checkQuery);
-<<<<<<< HEAD
                 $stmt->bind_param("ii", $student_id, $subject_id);
-=======
-                $stmt->bind_param("si", $student_id, $subject_id);
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                 $stmt->execute();
                 $result = $stmt->get_result();
                 $row = $result->fetch_assoc();
@@ -391,11 +383,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     // Insert new subject enrollment
                     $insertQuery = "INSERT INTO $relationshipTable (student_id, subject_id) VALUES (?, ?)";
                     $stmt = $conn->prepare($insertQuery);
-<<<<<<< HEAD
                     $stmt->bind_param("ii", $student_id, $subject_id);
-=======
-                    $stmt->bind_param("si", $student_id, $subject_id);
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                     
                     if ($stmt->execute()) {
                         // Get subject name for success message
@@ -453,11 +441,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 // Remove existing subjects
                 $deleteQuery = "DELETE FROM $relationshipTable WHERE student_id = ?";
                 $stmt = $conn->prepare($deleteQuery);
-<<<<<<< HEAD
                 $stmt->bind_param("i", $student_id);
-=======
-                $stmt->bind_param("s", $student_id);
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                 $stmt->execute();
                 $stmt->close();
 
@@ -467,11 +451,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $stmt = $conn->prepare($insertQuery);
                     
                     foreach ($subject_ids as $subject_id) {
-<<<<<<< HEAD
                         $stmt->bind_param("ii", $student_id, $subject_id);
-=======
-                        $stmt->bind_param("si", $student_id, $subject_id);
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                         $stmt->execute();
                     }
                     $stmt->close();
@@ -1325,8 +1305,6 @@ if (isset($_GET['get_subjects']) && isset($_GET['student_id'])) {
                                                         <span class="subject-badge">
                                                             <?php echo htmlspecialchars($subjectName); ?>
                                                         </span>
-<<<<<<< HEAD
-=======
                                                     <?php endforeach; ?>
                                                 </div>
                                             <?php else: ?>
@@ -1337,26 +1315,6 @@ if (isset($_GET['get_subjects']) && isset($_GET['student_id'])) {
                                             <?php endif; ?>
                                         </td>
                                         <td>
-                                            <form action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" method="POST" class="class-form" style="display: inline-flex; gap: 0.5rem;">
-                                                <input type="hidden" name="student_id" value="<?php echo $student['student_id'] ?? ''; ?>">
-                                                <select name="class" required>
-                                                    <option value="">Select Class</option>
-                                                    <?php foreach (['Form 1', 'Form 2', 'Form 3', 'Form 4', 'Form 5', 'Form 6'] as $class): ?>
-                                                        <option value="<?php echo $class; ?>" <?php echo $class === ($student['class'] ?? '') ? 'selected' : ''; ?>>
-                                                            <?php echo strtoupper($class); ?>
-                                                        </option>
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
-                                                    <?php endforeach; ?>
-                                                </div>
-                                            <?php else: ?>
-                                                <span style="color: var(--text-light); font-style: italic;">No subjects assigned</span>
-                                            <?php endif; ?>
-                                            <?php else: ?>
-                                                <span style="color: var(--text-light); font-style: italic;">No subjects assigned</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td>
-<<<<<<< HEAD
                                             <td>
     <form action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" method="POST" class="class-form" style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; min-width: 350px;">
         
@@ -1390,8 +1348,6 @@ if (isset($_GET['get_subjects']) && isset($_GET['student_id'])) {
     </form>
 </td>
                                         <td>
-=======
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                                             <?php if (!empty($subjects)): ?>
                                                 <div class="subject-form">
                                                     <form action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" method="POST" style="display: flex; gap: 0.5rem; align-items: center;">

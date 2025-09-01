@@ -11,11 +11,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'parent') {
 $user_id = $_SESSION['user_id'];
 
 // --- FETCH ALL CHILDREN ASSIGNED TO THIS PARENT ---
-<<<<<<< HEAD
 // Updated to use the correct table name: student_parent_relationships (not parent_student_relationships)
-=======
-// Fixed table name: student_parent_relationships instead of parent_student_relationships
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
 $childrenQuery = "
     SELECT DISTINCT
         s.student_id as student_internal_id,
@@ -123,11 +119,9 @@ function markToGrade($mark) {
 }
 
 if ($fees_cleared) {
-    // Updated query to match your actual results table structure
     $resultsQuery = "
         SELECT
             r.result_id, 
-<<<<<<< HEAD
             COALESCE(s.subject_name, r.subject) as subject_name, 
             r.final_mark, 
             r.final_grade, 
@@ -139,27 +133,13 @@ if ($fees_cleared) {
             MAX(CASE WHEN ta.assessment_name = 'Assessment 1' THEN ta.mark END) AS assessment_1_mark,
             MAX(CASE WHEN ta.assessment_name = 'Assessment 2' THEN ta.mark END) AS assessment_2_mark,
             MAX(CASE WHEN ta.assessment_name = 'End of Term Exam' THEN ta.mark END) AS exam_mark
-=======
-            COALESCE(s.subject_name, r.subject, 'Unknown Subject') as subject_name,
-            r.final_mark, 
-            r.grade as final_grade,
-            r.term, 
-            r.academic_year as year,
-            r.marks_obtained,
-            r.total_marks,
-            r.comments,
-            r.created_at
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
         FROM results r
-        LEFT JOIN subjects s ON r.subject = s.subject_name OR r.subject = s.subject_id
+        LEFT JOIN subjects s ON r.subject_id = s.subject_id
+        LEFT JOIN term_assessments ta ON r.result_id = ta.result_id
         WHERE r.student_id = ?
-<<<<<<< HEAD
         GROUP BY r.result_id, s.subject_name, r.subject, r.final_mark, r.final_grade, r.target_grade, 
                  r.attitude_to_learning, r.comments, r.term, r.year
         ORDER BY r.year DESC, r.term DESC, COALESCE(s.subject_name, r.subject) ASC";
-=======
-        ORDER BY r.academic_year DESC, r.term DESC, r.subject ASC";
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
 
     $stmt_results = $conn->prepare($resultsQuery);
     if (!$stmt_results) { 
@@ -171,27 +151,12 @@ if ($fees_cleared) {
 
     if ($results) {
         while ($row = $results->fetch_assoc()) {
-<<<<<<< HEAD
             // Convert exam mark to grade if not available
             if (empty($row['exam_grade'])) {
                 $row['exam_grade'] = markToGrade($row['exam_mark']);
             }
             
             $report_key = "{$row['term']}|{$row['year']}";
-=======
-            // Use academic_year from your table structure
-            $year = $row['year'] ?? date('Y');
-            $term = $row['term'] ?? 'Term 1';
-            $report_key = "{$term}|{$year}";
-            
-            // Calculate percentage if we have marks
-            if ($row['marks_obtained'] && $row['total_marks'] && $row['total_marks'] > 0) {
-                $row['percentage'] = round(($row['marks_obtained'] / $row['total_marks']) * 100, 1);
-            } else {
-                $row['percentage'] = $row['final_mark'] ?? 0;
-            }
-            
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
             $all_results_by_term[$report_key][] = $row;
         }
     }
@@ -604,17 +569,30 @@ if ($fees_cleared) {
                                 <thead>
                                     <tr>
                                         <th>Subject</th>
-                                        <th>Marks Obtained</th>
-                                        <th>Total Marks</th>
-                                        <th>Percentage (%)</th>
-                                        <th>Grade</th>
+                                        <th>Assessment 1 (%)</th>
+                                        <th>Assessment 2 (%)</th>
+                                        <th>End of Term Exam (%)</th>
+                                        <th>Exam Grade</th>
+                                        <th>Target Grade</th>
+                                        <th>On Target</th>
+                                        <th>Attitude (1-5)</th>
                                         <th>Comments</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php foreach ($selected_report_data as $row): ?>
+                                        <?php
+                                        $otg_display = '<span style="color: #999;">-</span>';
+                                        $final_grade_value = getGradeNumericValue($row['final_grade']);
+                                        $target_grade_value = getGradeNumericValue($row['target_grade']);
+
+                                        if (!is_null($final_grade_value) && !is_null($target_grade_value)) {
+                                            $otg_display = ($final_grade_value >= $target_grade_value) ? 
+                                                '<span class="icon-success">✔</span>' : 
+                                                '<span class="icon-danger">✖</span>';
+                                        }
+                                        ?>
                                         <tr>
-<<<<<<< HEAD
                                             <td><?= htmlspecialchars($row['subject_name'] ?? 'Unknown Subject') ?></td>
                                             <td><?= format_mark($row['assessment_1_mark']) ?></td>
                                             <td><?= format_mark($row['assessment_2_mark']) ?></td>
@@ -623,13 +601,6 @@ if ($fees_cleared) {
                                             <td><?= htmlspecialchars($row['target_grade'] ?? '-') ?></td>
                                             <td><?= $otg_display ?></td>
                                             <td><?= htmlspecialchars($row['attitude_to_learning'] ?? '-') ?></td>
-=======
-                                            <td><?= htmlspecialchars($row['subject_name']) ?></td>
-                                            <td><?= format_mark($row['marks_obtained']) ?></td>
-                                            <td><?= format_mark($row['total_marks']) ?></td>
-                                            <td><?= format_mark($row['percentage'], 1) ?>%</td>
-                                            <td><?= htmlspecialchars($row['final_grade'] ?? '-') ?></td>
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                                             <td class="comment-cell"><?= htmlspecialchars($row['comments'] ?? '') ?></td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -639,11 +610,12 @@ if ($fees_cleared) {
                         <div class="key-section">
                             <h4>Key Definitions</h4>
                             <ul>
-                                <li><strong>Marks Obtained:</strong> Actual marks scored by student</li>
-                                <li><strong>Total Marks:</strong> Maximum possible marks</li>
-                                <li><strong>Percentage:</strong> Performance percentage</li>
-                                <li><strong>Grade:</strong> Letter grade assigned</li>
-                                <li><strong>Comments:</strong> Teacher feedback and remarks</li>
+                                <li><strong>Assessment 1/2:</strong> Coursework Assessment Mark</li>
+                                <li><strong>End of Term Exam:</strong> Final Exam Mark</li>
+                                <li><strong>Exam Grade:</strong> Grade for the End of Term Exam</li>
+                                <li><strong>Target Grade:</strong> Student's goal for the subject</li>
+                                <li><strong>On Target:</strong> <span class="icon-success">✔</span> Met / <span class="icon-danger">✖</span> Below Target</li>
+                                <li><strong>Attitude:</strong> Attitude to Learning (1-5)</li>
                             </ul>
                         </div>
                     <?php else: ?>

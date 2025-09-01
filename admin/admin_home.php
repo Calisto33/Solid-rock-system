@@ -11,42 +11,8 @@ $totalParents = $conn->query("SELECT COUNT(*) as count FROM parents")->fetch_ass
 
 $passingStudents = 0;
 $failingStudents = 0;
-<<<<<<< HEAD
 // --- FIX: Changed 'year' to 'academic_year' in the query below ---
 $sqlPerformance = "SELECT SUM(IF(final_mark >= 50, 1, 0)) as passing_count, SUM(IF(final_mark < 50, 1, 0)) as failing_count FROM results WHERE academic_year = '2025'";
-=======
-
-// First, let's check what columns exist in the results table
-$columnsQuery = "SHOW COLUMNS FROM results";
-$columnsResult = $conn->query($columnsQuery);
-$hasYearColumn = false;
-$hasCreatedAtColumn = false;
-
-if ($columnsResult) {
-    while ($column = $columnsResult->fetch_assoc()) {
-        if ($column['Field'] === 'year') {
-            $hasYearColumn = true;
-        }
-        if ($column['Field'] === 'created_at') {
-            $hasCreatedAtColumn = true;
-        }
-    }
-}
-
-// Build the performance query based on available columns
-if ($hasYearColumn) {
-    // If year column exists, use it
-    $sqlPerformance = "SELECT SUM(IF(final_mark >= 50, 1, 0)) as passing_count, SUM(IF(final_mark < 50, 1, 0)) as failing_count FROM results WHERE year = 2025";
-} elseif ($hasCreatedAtColumn) {
-    // If created_at exists, filter by current year
-    $currentYear = date('Y');
-    $sqlPerformance = "SELECT SUM(IF(final_mark >= 50, 1, 0)) as passing_count, SUM(IF(final_mark < 50, 1, 0)) as failing_count FROM results WHERE YEAR(created_at) = $currentYear";
-} else {
-    // If neither exists, get all results without year filter
-    $sqlPerformance = "SELECT SUM(IF(final_mark >= 50, 1, 0)) as passing_count, SUM(IF(final_mark < 50, 1, 0)) as failing_count FROM results";
-}
-
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
 $resultPerformance = $conn->query($sqlPerformance);
 if ($resultPerformance) {
     $row = $resultPerformance->fetch_assoc();

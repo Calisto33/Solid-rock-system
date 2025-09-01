@@ -14,103 +14,27 @@ if (!$student_id) {
     die("Error: Student ID is missing.");
 }
 
-// Function to get formatted student name (same as in other files)
-function getFormattedStudentName($first_name, $last_name, $username, $student_id) {
-    $first_name = trim($first_name ?? '');
-    $last_name = trim($last_name ?? '');
-    $username = trim($username ?? '');
-    
-    // If we have both first and last name
-    if (!empty($first_name) && !empty($last_name)) {
-        return $first_name . ' ' . $last_name;
-    }
-    // If we have only first name
-    elseif (!empty($first_name)) {
-        return $first_name;
-    }
-    // If we have only last name
-    elseif (!empty($last_name)) {
-        return $last_name;
-    }
-    // If we have username
-    elseif (!empty($username)) {
-        return $username;
-    }
-    // Fallback to student ID
-    else {
-        return 'Student ' . $student_id;
-    }
-}
-
-// Fetch student details - UPDATED to get proper student name
-$studentQuery = "SELECT student_id, first_name, last_name, username, class, status FROM students WHERE student_id = ?";
+// Fetch student details
+$studentQuery = "SELECT username, class FROM students WHERE student_id = ?";
 $stmt = $conn->prepare($studentQuery);
-$stmt->bind_param("s", $student_id);
+$stmt->bind_param("i", $student_id);
 $stmt->execute();
 $student = $stmt->get_result()->fetch_assoc();
 if (!$student) {
     die("Error: Student not found.");
 }
 
-// Format the student name
-$student_display_name = getFormattedStudentName(
-    $student['first_name'], 
-    $student['last_name'], 
-    $student['username'], 
-    $student['student_id']
-);
-
-// Fetch results for the student - CORRECTED QUERY based on actual database structure
+// Fetch results for the student --- THIS QUERY HAS BEEN CORRECTED ---
 $resultsQuery = "
-    SELECT 
-        subject, 
-        term, 
-        academic_year,
-        marks_obtained,
-        total_marks,
-        final_mark, 
-        grade,
-        exam_date,
-        comments,
-        exam_type
-    FROM results 
-    WHERE student_id = ?
-    ORDER BY academic_year DESC, term, subject";
-
+    SELECT ts.subject_name, r.term, r.year, r.final_mark, r.final_grade, r.comments
+    FROM results r
+    JOIN table_subject ts ON r.subject_id = ts.subject_id
+    WHERE r.student_id = ?
+    ORDER BY r.year, r.term, ts.subject_name";
 $stmt = $conn->prepare($resultsQuery);
-$stmt->bind_param("s", $student_id);
+$stmt->bind_param("i", $student_id);
 $stmt->execute();
 $results = $stmt->get_result();
-
-// Function to calculate percentage
-function calculatePercentage($marks_obtained, $total_marks) {
-    if ($total_marks > 0) {
-        return round(($marks_obtained / $total_marks) * 100, 1);
-    }
-    return 0;
-}
-
-// Function to determine grade color
-function getGradeColor($grade) {
-    switch (strtoupper(trim($grade))) {
-        case 'A':
-        case 'A+':
-            return '#10b981'; // Green
-        case 'B':
-        case 'B+':
-            return '#3b82f6'; // Blue
-        case 'C':
-        case 'C+':
-            return '#f59e0b'; // Orange
-        case 'D':
-        case 'D+':
-            return '#ef4444'; // Red
-        case 'F':
-            return '#dc2626'; // Dark red
-        default:
-            return '#6b7280'; // Gray
-    }
-}
 ?>
 
 <!DOCTYPE html>
@@ -118,13 +42,9 @@ function getGradeColor($grade) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<<<<<<< HEAD
     <link rel="icon" type="image/jpeg" href="../images/logo.jpeg">
     <link rel="shortcut icon" type="image/jpeg" href="../images/logo.jpeg">
     <title>Student Results | Solid Rock</title>
-=======
-    <title>Student Results - <?= htmlspecialchars($student_display_name) ?> | Wisetech College</title>
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -250,11 +170,11 @@ function getGradeColor($grade) {
             box-shadow: var(--shadow-md);
             overflow: hidden;
             transition: var(--transition);
-            margin-bottom: 2rem;
         }
 
         .card:hover {
             box-shadow: var(--shadow-lg);
+            transform: translateY(-3px);
         }
 
         .card-header {
@@ -271,12 +191,6 @@ function getGradeColor($grade) {
             gap: 1rem;
         }
 
-        .student-details {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
         .student-name {
             font-size: 1.5rem;
             font-weight: 600;
@@ -284,15 +198,9 @@ function getGradeColor($grade) {
             margin: 0;
         }
 
-        .student-id {
-            font-size: 0.9rem;
-            color: var(--text-light);
-            font-weight: 500;
-        }
-
         .student-class {
             display: inline-block;
-            padding: 0.5rem 1rem;
+            padding: 0.35rem 0.75rem;
             background-color: var(--accent-light);
             color: var(--primary-dark);
             border-radius: var(--border-radius);
@@ -301,39 +209,12 @@ function getGradeColor($grade) {
         }
 
         .card-body {
-            padding: 1.5rem 2rem;
-        }
-
-        .summary-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .stat-card {
-            background: var(--gray-light);
-            padding: 1.5rem;
-            border-radius: var(--border-radius);
-            text-align: center;
-            border-left: 4px solid var(--primary-color);
-        }
-
-        .stat-number {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--primary-color);
-            display: block;
-        }
-
-        .stat-label {
-            font-size: 0.9rem;
-            color: var(--text-light);
-            margin-top: 0.5rem;
+            padding: 0 1rem 1.5rem;
         }
 
         .table-wrapper {
             overflow-x: auto;
+            margin-top: 1rem;
             border-radius: calc(var(--border-radius) - 4px);
             box-shadow: var(--shadow-sm);
         }
@@ -343,24 +224,20 @@ function getGradeColor($grade) {
             border-collapse: collapse;
             text-align: left;
             white-space: nowrap;
-            min-width: 800px;
         }
 
         th, td {
-            padding: 1rem 1.25rem;
+            padding: 1rem 1.5rem;
             border-bottom: 1px solid var(--gray-mid);
         }
 
         th {
             background-color: var(--primary-color);
             color: var(--white);
-            font-weight: 600;
+            font-weight: 500;
             text-transform: uppercase;
             font-size: 0.85rem;
             letter-spacing: 0.05em;
-            position: sticky;
-            top: 0;
-            z-index: 10;
         }
 
         th:first-child {
@@ -375,16 +252,11 @@ function getGradeColor($grade) {
             border-bottom: none;
         }
 
-        tbody tr:hover {
+        tr:hover {
             background-color: var(--gray-light);
         }
 
         .grade-cell {
-            font-weight: 700;
-            font-size: 1.1rem;
-        }
-
-        .percentage-cell {
             font-weight: 600;
         }
 
@@ -392,20 +264,6 @@ function getGradeColor($grade) {
             margin-top: 2rem;
             display: flex;
             justify-content: center;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
-
-        .no-results {
-            text-align: center;
-            padding: 3rem;
-            color: var(--text-light);
-        }
-
-        .no-results i {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-            color: var(--gray-mid);
         }
 
         .footer {
@@ -445,291 +303,10 @@ function getGradeColor($grade) {
             cursor: pointer;
         }
 
-        /* Enhanced Print Styles */
-        @media print {
-            * {
-                -webkit-print-color-adjust: exact !important;
-                color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-            
-            @page {
-                margin: 0.75in;
-                size: A4;
-            }
-            
-            body {
-                background: white !important;
-                font-size: 12pt;
-                line-height: 1.4;
-                color: #000 !important;
-            }
-            
-            .header {
-                background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)) !important;
-                color: white !important;
-                page-break-inside: avoid;
-                margin-bottom: 20pt;
-                padding: 15pt 20pt;
-                border-radius: 0;
-                position: static;
-                box-shadow: none;
-                -webkit-print-color-adjust: exact;
-            }
-            
-            .header-nav,
-            .mobile-menu-btn {
-                display: none !important;
-            }
-            
-            .header-title {
-                font-size: 18pt !important;
-                font-weight: bold;
-            }
-            
-            .container {
-                width: 100% !important;
-                max-width: none !important;
-                margin: 0 !important;
-                padding: 0 !important;
-            }
-            
-            .card {
-                box-shadow: none !important;
-                border: 1pt solid #ddd !important;
-                border-radius: 0 !important;
-                margin: 0 !important;
-                page-break-inside: avoid;
-                background: white !important;
-            }
-            
-            .card-header {
-                background: #f8f9fa !important;
-                border-bottom: 2pt solid #e9ecef !important;
-                padding: 15pt 20pt !important;
-                page-break-inside: avoid;
-                -webkit-print-color-adjust: exact;
-            }
-            
-            .student-name {
-                font-size: 16pt !important;
-                font-weight: bold !important;
-                color: #1e40af !important;
-                margin-bottom: 5pt;
-            }
-            
-            .student-id {
-                font-size: 11pt !important;
-                color: #666 !important;
-                margin-bottom: 8pt;
-            }
-            
-            .student-class {
-                background: #e3f2fd !important;
-                color: #1976d2 !important;
-                padding: 5pt 10pt !important;
-                border-radius: 4pt !important;
-                font-size: 10pt !important;
-                font-weight: bold !important;
-                border: 1pt solid #bbdefb !important;
-                -webkit-print-color-adjust: exact;
-            }
-            
-            .card-body {
-                padding: 15pt 20pt !important;
-            }
-            
-            .summary-stats {
-                display: grid !important;
-                grid-template-columns: repeat(4, 1fr) !important;
-                gap: 10pt !important;
-                margin-bottom: 20pt !important;
-                page-break-inside: avoid;
-            }
-            
-            .stat-card {
-                background: #f8fafc !important;
-                border: 1pt solid #e2e8f0 !important;
-                border-left: 4pt solid var(--primary-color) !important;
-                padding: 12pt !important;
-                text-align: center !important;
-                border-radius: 4pt !important;
-                -webkit-print-color-adjust: exact;
-            }
-            
-            .stat-number {
-                font-size: 18pt !important;
-                font-weight: bold !important;
-                color: #2563eb !important;
-                display: block !important;
-                margin-bottom: 3pt;
-            }
-            
-            .stat-label {
-                font-size: 9pt !important;
-                color: #666 !important;
-                text-transform: uppercase;
-                letter-spacing: 0.5pt;
-            }
-            
-            .table-wrapper {
-                overflow: visible !important;
-                border-radius: 0 !important;
-                box-shadow: none !important;
-                page-break-inside: auto;
-            }
-            
-            table {
-                width: 100% !important;
-                border-collapse: collapse !important;
-                min-width: auto !important;
-                font-size: 10pt !important;
-                page-break-inside: auto;
-            }
-            
-            th {
-                background: #2563eb !important;
-                color: white !important;
-                font-weight: bold !important;
-                font-size: 9pt !important;
-                padding: 8pt 6pt !important;
-                text-align: center !important;
-                border: 1pt solid #1e40af !important;
-                page-break-inside: avoid;
-                page-break-after: avoid;
-                -webkit-print-color-adjust: exact;
-            }
-            
-            td {
-                padding: 6pt 4pt !important;
-                font-size: 9pt !important;
-                border: 1pt solid #ddd !important;
-                text-align: center !important;
-                page-break-inside: avoid;
-                background: white !important;
-            }
-            
-            tbody tr:nth-child(even) td {
-                background: #fafbfc !important;
-                -webkit-print-color-adjust: exact;
-            }
-            
-            .grade-cell {
-                font-weight: bold !important;
-                font-size: 11pt !important;
-            }
-            
-            .percentage-cell {
-                font-weight: bold !important;
-                font-size: 10pt !important;
-            }
-            
-            .no-results {
-                text-align: center !important;
-                padding: 30pt !important;
-                color: #666 !important;
-                page-break-inside: avoid;
-            }
-            
-            .no-results i {
-                font-size: 24pt !important;
-                margin-bottom: 10pt !important;
-                color: #ccc !important;
-            }
-            
-            .actions {
-                display: none !important;
-            }
-            
-            .footer {
-                background: #0f172a !important;
-                color: white !important;
-                padding: 15pt !important;
-                margin-top: 20pt !important;
-                text-align: center !important;
-                page-break-inside: avoid;
-                -webkit-print-color-adjust: exact;
-            }
-            
-            .footer-text {
-                font-size: 10pt !important;
-                opacity: 1 !important;
-            }
-            
-            /* Ensure proper page breaks */
-            .card-header {
-                page-break-after: avoid;
-            }
-            
-            .summary-stats {
-                page-break-after: avoid;
-            }
-            
-            thead {
-                display: table-header-group;
-                page-break-inside: avoid;
-                page-break-after: avoid;
-            }
-            
-            tbody {
-                display: table-row-group;
-            }
-            
-            tr {
-                page-break-inside: avoid;
-                page-break-after: auto;
-            }
-            
-            /* Specific adjustments for better print layout */
-            .student-info {
-                display: flex !important;
-                justify-content: space-between !important;
-                align-items: flex-start !important;
-                flex-wrap: nowrap !important;
-                gap: 15pt !important;
-            }
-            
-            .student-details {
-                flex: 1;
-            }
-            
-            /* Hide elements that shouldn't print */
-            .btn,
-            button,
-            .mobile-menu-btn,
-            .header-nav {
-                display: none !important;
-            }
-            
-            /* Print-specific header layout */
-            .header-left {
-                display: flex !important;
-                align-items: center !important;
-                gap: 15pt !important;
-                width: 100%;
-                justify-content: center !important;
-            }
-            
-            .header-logo {
-                height: 35pt !important;
-                width: auto !important;
-            }
-            
-            /* Ensure colors print correctly */
-            * {
-                -webkit-print-color-adjust: exact !important;
-                color-adjust: exact !important;
-            }
-        }
-
         /* Responsive Design */
         @media screen and (max-width: 992px) {
             th, td {
-                padding: 0.8rem 1rem;
-            }
-            
-            .summary-stats {
-                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                padding: 0.9rem 1.25rem;
             }
         }
 
@@ -763,51 +340,44 @@ function getGradeColor($grade) {
                 right: 0;
             }
 
-            .container {
-                width: 95%;
-                margin: 1rem auto;
-            }
-
-            .card-header,
-            .card-body {
-                padding: 1.25rem 1.5rem;
-            }
-
             th, td {
-                padding: 0.75rem 0.5rem;
+                padding: 0.8rem 1rem;
                 font-size: 0.9rem;
             }
 
             .student-name {
                 font-size: 1.25rem;
             }
+        }
+
+        @media screen and (max-width: 576px) {
+            .container {
+                width: 96%;
+                margin: 1rem auto;
+            }
+
+            .card-header {
+                padding: 1.25rem 1.5rem;
+            }
 
             .student-info {
                 flex-direction: column;
                 align-items: flex-start;
-                gap: 1rem;
+                gap: 0.5rem;
             }
-        }
 
-        @media screen and (max-width: 576px) {
-            .summary-stats {
-                grid-template-columns: 1fr;
-            }
-            
             th, td {
-                padding: 0.6rem 0.4rem;
+                padding: 0.75rem 0.85rem;
                 font-size: 0.85rem;
             }
 
             .actions {
-                flex-direction: column;
-                align-items: center;
+                margin-top: 1.5rem;
             }
 
             .btn {
-                width: 100%;
-                max-width: 300px;
-                justify-content: center;
+                padding: 0.5rem 1rem;
+                font-size: 0.9rem;
             }
         }
     </style>
@@ -824,9 +394,6 @@ function getGradeColor($grade) {
         </button>
         
         <nav class="header-nav" id="headerNav">
-            <a href="student_records.php" class="btn btn-primary">
-                <i class="fas fa-arrow-left"></i> Back to Records
-            </a>
             <a href="super_admin_dashboard.php" class="btn btn-primary">
                 <i class="fas fa-home"></i> Dashboard
             </a>
@@ -840,69 +407,18 @@ function getGradeColor($grade) {
         <div class="card">
             <div class="card-header">
                 <div class="student-info">
-                    <div class="student-details">
-                        <h2 class="student-name">
-                            <i class="fas fa-user-graduate"></i>
-                            <?= htmlspecialchars($student_display_name) ?>
-                        </h2>
-                        <div class="student-id">
-                            <i class="fas fa-id-card"></i>
-                            Student ID: <?= htmlspecialchars($student['student_id']) ?>
-                        </div>
-                    </div>
+                    <h2 class="student-name">
+                        <i class="fas fa-user-graduate"></i>
+                        <?= htmlspecialchars($student['username']) ?>
+                    </h2>
                     <span class="student-class">
                         <i class="fas fa-users"></i>
-                        Class: <?= htmlspecialchars($student['class'] ?? 'Unassigned') ?>
+                        Class: <?= htmlspecialchars($student['class']) ?>
                     </span>
                 </div>
             </div>
             
             <div class="card-body">
-                <?php if ($results->num_rows > 0): ?>
-                    <?php
-                    // Calculate summary statistics
-                    $total_subjects = 0;
-                    $total_percentage = 0;
-                    $grades = [];
-                    $results_array = [];
-                    
-                    // Store results in array for processing
-                    while ($row = $results->fetch_assoc()) {
-                        $results_array[] = $row;
-                        if ($row['total_marks'] > 0) {
-                            $percentage = calculatePercentage($row['marks_obtained'], $row['total_marks']);
-                            $total_percentage += $percentage;
-                            $total_subjects++;
-                        }
-                        if (!empty($row['grade'])) {
-                            $grades[] = $row['grade'];
-                        }
-                    }
-                    
-                    $average_percentage = $total_subjects > 0 ? round($total_percentage / $total_subjects, 1) : 0;
-                    $unique_subjects = count(array_unique(array_column($results_array, 'subject')));
-                    ?>
-                    
-                    <div class="summary-stats">
-                        <div class="stat-card">
-                            <span class="stat-number"><?= $total_subjects ?></span>
-                            <div class="stat-label">Total Exams</div>
-                        </div>
-                        <div class="stat-card">
-                            <span class="stat-number"><?= $unique_subjects ?></span>
-                            <div class="stat-label">Subjects</div>
-                        </div>
-                        <div class="stat-card">
-                            <span class="stat-number"><?= $average_percentage ?>%</span>
-                            <div class="stat-label">Average Score</div>
-                        </div>
-                        <div class="stat-card">
-                            <span class="stat-number"><?= count($grades) ?></span>
-                            <div class="stat-label">Graded Exams</div>
-                        </div>
-                    </div>
-                <?php endif; ?>
-                
                 <div class="table-wrapper">
                     <table>
                         <thead>
@@ -910,57 +426,30 @@ function getGradeColor($grade) {
                                 <th><i class="fas fa-book"></i> Subject</th>
                                 <th><i class="fas fa-calendar-alt"></i> Term</th>
                                 <th><i class="fas fa-calendar-day"></i> Year</th>
-                                <th><i class="fas fa-pencil-alt"></i> Exam Type</th>
-                                <th><i class="fas fa-clipboard-check"></i> Marks</th>
-                                <th><i class="fas fa-percentage"></i> Percentage</th>
-                                <th><i class="fas fa-award"></i> Grade</th>
-                                <th><i class="fas fa-calendar"></i> Date</th>
+                                <th><i class="fas fa-clipboard-check"></i> Final Mark</th>
+                                <th><i class="fas fa-award"></i> Final Grade</th>
                                 <th><i class="fas fa-comment"></i> Comments</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php 
-                            if ($results->num_rows > 0): 
-                                foreach ($results_array as $row):
-                                    $percentage = calculatePercentage($row['marks_obtained'], $row['total_marks']);
-                                    $grade_color = getGradeColor($row['grade']);
+                            if ($results->num_rows > 0):
+                                while ($row = $results->fetch_assoc()): 
                             ?>
                                 <tr>
-                                    <td><strong><?= htmlspecialchars($row['subject']) ?></strong></td>
-                                    <td><?= htmlspecialchars($row['term'] ?? 'N/A') ?></td>
-                                    <td><?= htmlspecialchars($row['academic_year'] ?? 'N/A') ?></td>
-                                    <td><?= htmlspecialchars($row['exam_type'] ?? 'Final Exam') ?></td>
-                                    <td>
-                                        <?= htmlspecialchars($row['marks_obtained']) ?> / <?= htmlspecialchars($row['total_marks']) ?>
-                                        <?php if ($row['final_mark']): ?>
-                                            <br><small style="color: var(--text-light);">Final: <?= htmlspecialchars($row['final_mark']) ?></small>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td class="percentage-cell">
-                                        <span style="color: <?= $percentage >= 70 ? '#10b981' : ($percentage >= 50 ? '#f59e0b' : '#ef4444') ?>">
-                                            <?= $percentage ?>%
-                                        </span>
-                                    </td>
-                                    <td class="grade-cell" style="color: <?= $grade_color ?>">
-                                        <?= htmlspecialchars($row['grade'] ?: 'N/A') ?>
-                                    </td>
-                                    <td>
-                                        <?= $row['exam_date'] ? date('M j, Y', strtotime($row['exam_date'])) : 'N/A' ?>
-                                    </td>
-                                    <td><?= htmlspecialchars($row['comments'] ?: 'No comments') ?></td>
+                                    <td><?= htmlspecialchars($row['subject_name']) ?></td>
+                                    <td><?= htmlspecialchars($row['term']) ?></td>
+                                    <td><?= htmlspecialchars($row['year']) ?></td>
+                                    <td><?= htmlspecialchars($row['final_mark']) ?></td>
+                                    <td class="grade-cell"><?= htmlspecialchars($row['final_grade']) ?></td>
+                                    <td><?= htmlspecialchars($row['comments']) ?></td>
                                 </tr>
                             <?php 
-                                endforeach;
+                                endwhile; 
                             else: 
                             ?>
                                 <tr>
-                                    <td colspan="9" class="no-results">
-                                        <div>
-                                            <i class="fas fa-chart-line"></i>
-                                            <h3>No Results Found</h3>
-                                            <p>No academic results have been recorded for this student yet.</p>
-                                        </div>
-                                    </td>
+                                    <td colspan="6" style="text-align: center; padding: 2rem;">No results found for this student</td>
                                 </tr>
                             <?php endif; ?>
                         </tbody>
@@ -971,12 +460,6 @@ function getGradeColor($grade) {
                     <a href="student_records.php" class="btn btn-primary">
                         <i class="fas fa-arrow-left"></i> Back to Student Records
                     </a>
-                    <button onclick="window.print()" class="btn btn-secondary">
-                        <i class="fas fa-print"></i> Print Results
-                    </button>
-                    <button onclick="downloadPDF()" class="btn btn-secondary">
-                        <i class="fas fa-file-pdf"></i> Download PDF
-                    </button>
                 </div>
             </div>
         </div>
@@ -1003,73 +486,6 @@ function getGradeColor($grade) {
                 icon.classList.remove('fa-times');
                 icon.classList.add('fa-bars');
             }
-        });
-
-        // Close mobile menu when clicking outside
-        document.addEventListener('click', function(event) {
-            const nav = document.getElementById('headerNav');
-            const btn = document.getElementById('mobileMenuBtn');
-            
-            if (!nav.contains(event.target) && !btn.contains(event.target)) {
-                nav.classList.remove('active');
-                const icon = btn.querySelector('i');
-                icon.classList.remove('fa-times');
-                icon.classList.add('fa-bars');
-            }
-        });
-
-        // Enhanced print function
-        function printResults() {
-            // Add print-specific classes
-            document.body.classList.add('printing');
-            
-            // Trigger print
-            window.print();
-            
-            // Remove print classes after printing
-            setTimeout(() => {
-                document.body.classList.remove('printing');
-            }, 1000);
-        }
-
-        // PDF download function (requires html2pdf library)
-        function downloadPDF() {
-            // Check if html2pdf is available
-            if (typeof html2pdf === 'undefined') {
-                alert('PDF download feature requires additional setup. Please use the print function instead.');
-                return;
-            }
-
-            const element = document.querySelector('.container');
-            const studentName = '<?= addslashes($student_display_name) ?>';
-            const filename = `${studentName.replace(/[^a-z0-9]/gi, '_')}_Results.pdf`;
-
-            const opt = {
-                margin: 0.5,
-                filename: filename,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2 },
-                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-            };
-
-            html2pdf().set(opt).from(element).save();
-        }
-
-        // Print optimization
-        window.addEventListener('beforeprint', function() {
-            // Optimize layout for printing
-            const tables = document.querySelectorAll('table');
-            tables.forEach(table => {
-                table.style.fontSize = '10pt';
-            });
-        });
-
-        window.addEventListener('afterprint', function() {
-            // Restore normal layout
-            const tables = document.querySelectorAll('table');
-            tables.forEach(table => {
-                table.style.fontSize = '';
-            });
         });
     </script>
 </body>

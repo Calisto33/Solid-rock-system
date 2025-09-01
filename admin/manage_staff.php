@@ -95,7 +95,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['remove_staff'])) {
     exit();
 }
 
-<<<<<<< HEAD
 // --- FIXED: Updated query to match actual database structure ---
 // Fetch all staff members (approved) with information from staff table only
 $approvedStaffQuery = "
@@ -111,59 +110,6 @@ $approvedStaffQuery = "
         s.department,
         s.position,
         s.phone_number
-=======
-// First, let's check what columns actually exist in staff_profile table
-$checkColumnsQuery = "SHOW COLUMNS FROM staff_profile";
-$columnsResult = $conn->query($checkColumnsQuery);
-$existing_columns = [];
-if ($columnsResult) {
-    while ($row = $columnsResult->fetch_assoc()) {
-        $existing_columns[] = $row['Field'];
-    }
-}
-
-// Build the SELECT query dynamically based on existing columns
-$basic_columns = "
-    u.id,
-    u.username,
-    u.email as user_email,
-    u.role,
-    u.status,
-    u.created_at,
-    s.staff_id,
-    s.id_number,
-    s.department as staff_department,
-    s.position as staff_position,
-    s.phone_number,
-    s.email as staff_email";
-
-$profile_columns = [];
-if (!empty($existing_columns)) {
-    $profile_columns[] = "sp.department as profile_department";
-    $profile_columns[] = "sp.position as profile_position";
-    $profile_columns[] = "sp.social_description";
-
-    // Add optional columns only if they exist
-    $optional_columns = [
-        'national_id', 'address', 'date_of_birth', 'gender', 'marital_status',
-        'emergency_contact_name', 'emergency_contact_phone', 'qualification',
-        'experience_years', 'salary', 'hire_date', 'contract_type'
-    ];
-
-    foreach ($optional_columns as $col) {
-        if (in_array($col, $existing_columns)) {
-            $profile_columns[] = "sp.$col";
-        }
-    }
-}
-
-$all_profile_columns = !empty($profile_columns) ? ",\n        " . implode(",\n        ", $profile_columns) : "";
-
-// Fetch all staff members (approved) with comprehensive information
-$approvedStaffQuery = "
-    SELECT 
-        $basic_columns$all_profile_columns
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
     FROM users u
     LEFT JOIN staff s ON u.id = s.id
     WHERE u.role = 'staff' AND u.status = 'yes'
@@ -542,17 +488,6 @@ $pendingStaffResult = $conn->query($pendingStaffQuery);
             margin-top: auto;
         }
 
-        /* Debug info */
-        .debug-info {
-            background-color: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 0.25rem;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            font-family: monospace;
-            font-size: 0.875rem;
-        }
-
         /* Responsive */
         @media screen and (max-width: 768px) {
             .container {
@@ -592,14 +527,6 @@ $pendingStaffResult = $conn->query($pendingStaffQuery);
     </header>
 
     <div class="container">
-        <!-- Debug Information (remove in production) -->
-        <?php if (true): // Set to false to hide debug info ?>
-        <div class="debug-info">
-            <strong>Debug:</strong> Available staff_profile columns: <?= implode(', ', $existing_columns) ?><br>
-            <strong>Staff table data sample:</strong> Found <?= $approvedStaffResult->num_rows ?> approved staff members
-        </div>
-        <?php endif; ?>
-
         <!-- Alert Messages -->
         <?php if (isset($_SESSION['success_message'])): ?>
             <div class="alert alert-success">
@@ -690,12 +617,7 @@ $pendingStaffResult = $conn->query($pendingStaffQuery);
                             <tr>
                                 <th>Staff Information</th>
                                 <th>Contact Details</th>
-<<<<<<< HEAD
                                 <th class="hide-sm">Department & Position</th>
-=======
-                                <th class="hide-sm">Employment Info</th>
-                                <th class="hide-sm">Additional Details</th>
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                                 <th class="hide-sm">Status</th>
                                 <th>Actions</th>
                             </tr>
@@ -715,60 +637,21 @@ $pendingStaffResult = $conn->query($pendingStaffQuery);
                                     </td>
                                     <td>
                                         <div class="contact-info">
-                                            <div><i class="fas fa-envelope"></i> <?= safe_display($staff['user_email'] ?: $staff['staff_email']) ?></div>
+                                            <div><i class="fas fa-envelope"></i> <?= safe_display($staff['email']) ?></div>
                                             <?php if ($staff['phone_number']): ?>
                                                 <div><i class="fas fa-phone"></i> <?= safe_display($staff['phone_number']) ?></div>
                                             <?php endif; ?>
-<<<<<<< HEAD
-=======
-                                            <?php if (isset($staff['address']) && $staff['address']): ?>
-                                                <div><i class="fas fa-map-marker-alt"></i> <?= safe_display(substr($staff['address'], 0, 30)) ?>...</div>
-                                            <?php endif; ?>
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                                         </div>
                                     </td>
                                     <td class="hide-sm">
                                         <div class="contact-info">
-<<<<<<< HEAD
                                             <div><strong>Dept:</strong> <?= safe_display($staff['department'], 'Not Assigned') ?></div>
                                             <div><strong>Position:</strong> <?= safe_display($staff['position'], 'Not Assigned') ?></div>
-=======
-                                            <div><strong>Dept:</strong> <?= safe_display($staff['profile_department'] ?: $staff['staff_department'], 'Not Assigned') ?></div>
-                                            <div><strong>Position:</strong> <?= safe_display($staff['profile_position'] ?: $staff['staff_position'], 'Not Assigned') ?></div>
-                                            <?php if (isset($staff['hire_date']) && $staff['hire_date']): ?>
-                                                <div><strong>Hired:</strong> <?= date('M Y', strtotime($staff['hire_date'])) ?></div>
-                                            <?php endif; ?>
-                                            <?php if (isset($staff['contract_type']) && $staff['contract_type']): ?>
-                                                <div><strong>Type:</strong> <?= safe_display($staff['contract_type']) ?></div>
-                                            <?php endif; ?>
-                                        </div>
-                                    </td>
-                                    <td class="hide-sm">
-                                        <div class="contact-info">
-                                            <?php if (isset($staff['national_id']) && $staff['national_id']): ?>
-                                                <div><strong>National ID:</strong> <?= safe_display($staff['national_id']) ?></div>
-                                            <?php endif; ?>
-                                            <?php if (isset($staff['date_of_birth']) && $staff['date_of_birth']): ?>
-                                                <div><strong>DOB:</strong> <?= date('M d, Y', strtotime($staff['date_of_birth'])) ?></div>
-                                            <?php endif; ?>
-                                            <?php if (isset($staff['gender']) && $staff['gender']): ?>
-                                                <div><strong>Gender:</strong> <?= safe_display($staff['gender']) ?></div>
-                                            <?php endif; ?>
-                                            <?php if (isset($staff['emergency_contact_name']) && $staff['emergency_contact_name']): ?>
-                                                <div><strong>Emergency:</strong> <?= safe_display($staff['emergency_contact_name']) ?></div>
-                                            <?php endif; ?>
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                                         </div>
                                     </td>
                                     <td class="hide-sm">
                                         <span class="badge badge-success">Active</span>
                                         <div class="staff-detail">Since <?= date('M Y', strtotime($staff['created_at'])) ?></div>
-<<<<<<< HEAD
-=======
-                                        <?php if (isset($staff['experience_years']) && $staff['experience_years']): ?>
-                                            <div class="staff-detail"><?= $staff['experience_years'] ?> years exp.</div>
-                                        <?php endif; ?>
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                                     </td>
                                     <td>
                                         <div class="actions">

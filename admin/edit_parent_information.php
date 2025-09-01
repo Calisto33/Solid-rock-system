@@ -8,17 +8,6 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
     exit();
 }
 
-// FIRST: Check what columns exist in the parents table before doing anything else
-$parentsColumnsQuery = "SHOW COLUMNS FROM parents";
-$parentsColumnsResult = $conn->query($parentsColumnsQuery);
-$existingColumns = [];
-
-if ($parentsColumnsResult) {
-    while ($row = $parentsColumnsResult->fetch_assoc()) {
-        $existingColumns[] = $row['Field'];
-    }
-}
-
 // Initialize variables
 $error_message = '';
 $parent_id = null;
@@ -31,7 +20,6 @@ if (!isset($_GET['parent_id']) || empty($_GET['parent_id'])) {
 } else {
     $parent_id = intval($_GET['parent_id']); // Sanitize the input
     
-<<<<<<< HEAD
     // Fetch parent details from the parents table and user details
     $parentQuery = "
         SELECT 
@@ -47,23 +35,6 @@ if (!isset($_GET['parent_id']) || empty($_GET['parent_id'])) {
         FROM parents p
         LEFT JOIN users u ON p.user_id = u.id
         WHERE p.parent_id = ?";
-=======
-    // Build the SELECT query based on available columns
-    $selectColumns = ['p.parent_id', 'p.user_id'];
-    
-    // Add columns that exist in the table
-    $optionalColumns = ['phone_number', 'relationship', 'address', 'first_name', 'last_name'];
-    foreach ($optionalColumns as $col) {
-        if (in_array($col, $existingColumns)) {
-            $selectColumns[] = "p.$col";
-        }
-    }
-    
-    $selectClause = implode(', ', $selectColumns);
-    
-    // Fetch parent details
-    $parentQuery = "SELECT $selectClause FROM parents p WHERE p.parent_id = ?";
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
     
     $stmt = $conn->prepare($parentQuery);
     if ($stmt) {
@@ -84,7 +55,6 @@ if (!isset($_GET['parent_id']) || empty($_GET['parent_id'])) {
 // Get assigned students count for this parent using the student_parent_relationships table
 $assignedStudentsCount = 0;
 if ($parent_id) {
-<<<<<<< HEAD
     $countQuery = "SELECT COUNT(*) as count FROM student_parent_relationships WHERE parent_id = ?";
     $stmt = $conn->prepare($countQuery);
     if ($stmt) {
@@ -100,44 +70,6 @@ if ($parent_id) {
         // If the above query fails, we'll set count to 0 and continue
         $assignedStudentsCount = 0;
     }
-=======
-    // Check if parent_student_relationships table exists
-    $tableCheck = $conn->query("SHOW TABLES LIKE 'parent_student_relationships'");
-    $relationshipTableExists = $tableCheck->num_rows > 0;
-    
-    if ($relationshipTableExists) {
-        $countQuery = "SELECT COUNT(*) as count FROM parent_student_relationships WHERE parent_id = ?";
-    } else {
-        // Fallback: check if this parent has a student_id assigned
-        if (in_array('student_id', $existingColumns)) {
-            $countQuery = "SELECT CASE WHEN student_id IS NOT NULL AND student_id != '' THEN 1 ELSE 0 END as count FROM parents WHERE parent_id = ?";
-        } else {
-            $countQuery = "SELECT 0 as count";
-        }
-    }
-    
-    if ($countQuery !== "SELECT 0 as count") {
-        $stmt = $conn->prepare($countQuery);
-        $stmt->bind_param("i", $parent_id);
-        $stmt->execute();
-        $countResult = $stmt->get_result();
-        $countData = $countResult->fetch_assoc();
-        $assignedStudentsCount = $countData['count'];
-        $stmt->close();
-    }
-}
-
-// Get user information if user_id exists
-$userData = null;
-if ($parentData && !empty($parentData['user_id'])) {
-    $userQuery = "SELECT username, email FROM users WHERE id = ?";
-    $stmt = $conn->prepare($userQuery);
-    $stmt->bind_param("i", $parentData['user_id']);
-    $stmt->execute();
-    $userResult = $stmt->get_result();
-    $userData = $userResult->fetch_assoc();
-    $stmt->close();
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
 }
 ?>
 
@@ -311,16 +243,6 @@ if ($parentData && !empty($parentData['user_id'])) {
 
         .card-body {
             padding: 2rem;
-        }
-
-        .debug-info {
-            background-color: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: var(--border-radius);
-            padding: 1rem;
-            margin-bottom: 1rem;
-            font-family: monospace;
-            font-size: 0.875rem;
         }
 
         .info-box {
@@ -574,15 +496,6 @@ if ($parentData && !empty($parentData['user_id'])) {
                 <h2>Edit Parent Information</h2>
             </div>
             <div class="card-body">
-                <!-- Debug Information -->
-                <div class="debug-info">
-                    <strong>Debug Info:</strong><br>
-                    Available columns: <?= implode(', ', $existingColumns) ?><br>
-                    Parent ID: <?= htmlspecialchars($parent_id ?? 'None') ?><br>
-                    User ID: <?= htmlspecialchars($parentData['user_id'] ?? 'None') ?><br>
-                    Assigned Students: <?= $assignedStudentsCount ?>
-                </div>
-
                 <?php if (!empty($error_message)): ?>
                     <div class="error-message">
                         <i class="fas fa-exclamation-triangle"></i>
@@ -617,7 +530,6 @@ if ($parentData && !empty($parentData['user_id'])) {
                         <input type="hidden" name="parent_id" value="<?= $parent_id ?>">
                         <input type="hidden" name="user_id" value="<?= $parentData['user_id'] ?>">
                         
-<<<<<<< HEAD
                         <!-- Personal Information Section -->
                         <div class="form-section">
                             <h3><i class="fas fa-user"></i> Personal Information</h3>
@@ -630,20 +542,8 @@ if ($parentData && !empty($parentData['user_id'])) {
                                                value="<?= htmlspecialchars($parentData['first_name'] ?? '') ?>" 
                                                required>
                                     </div>
-=======
-                        <?php if (in_array('first_name', $existingColumns) && in_array('last_name', $existingColumns)): ?>
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label for="first_name" class="form-label">First Name</label>
-                                <div class="input-icon-wrapper">
-                                    <i class="fas fa-user input-icon"></i>
-                                    <input type="text" name="first_name" id="first_name" class="form-control input-with-icon" 
-                                           value="<?= htmlspecialchars($parentData['first_name'] ?? '') ?>" 
-                                           placeholder="Enter first name">
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                                 </div>
 
-<<<<<<< HEAD
                                 <div class="form-group">
                                     <label for="last_name" class="form-label">Last Name</label>
                                     <div class="input-icon-wrapper">
@@ -672,45 +572,10 @@ if ($parentData && !empty($parentData['user_id'])) {
                                                value="<?= htmlspecialchars($parentData['email'] ?? '') ?>" 
                                                required>
                                     </div>
-=======
-                            <div class="form-group">
-                                <label for="last_name" class="form-label">Last Name</label>
-                                <div class="input-icon-wrapper">
-                                    <i class="fas fa-user input-icon"></i>
-                                    <input type="text" name="last_name" id="last_name" class="form-control input-with-icon" 
-                                           value="<?= htmlspecialchars($parentData['last_name'] ?? '') ?>" 
-                                           placeholder="Enter last name">
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                                 </div>
                             </div>
                         </div>
-                        <?php endif; ?>
 
-                        <?php if ($userData): ?>
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label for="username" class="form-label">Username (from user account)</label>
-                                <div class="input-icon-wrapper">
-                                    <i class="fas fa-user input-icon"></i>
-                                    <input type="text" id="username" class="form-control input-with-icon" 
-                                           value="<?= htmlspecialchars($userData['username'] ?? '') ?>" 
-                                           readonly style="background-color: #f9fafb;">
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="email" class="form-label">Email (from user account)</label>
-                                <div class="input-icon-wrapper">
-                                    <i class="fas fa-envelope input-icon"></i>
-                                    <input type="email" id="email" class="form-control input-with-icon" 
-                                           value="<?= htmlspecialchars($userData['email'] ?? '') ?>" 
-                                           readonly style="background-color: #f9fafb;">
-                                </div>
-                            </div>
-                        </div>
-                        <?php endif; ?>
-
-<<<<<<< HEAD
                         <!-- Contact Information Section -->
                         <div class="form-section">
                             <h3><i class="fas fa-phone"></i> Contact Information</h3>
@@ -738,50 +603,20 @@ if ($parentData && !empty($parentData['user_id'])) {
                                             <option value="Guardian" <?= (isset($parentData['relationship']) && $parentData['relationship'] == 'Guardian') ? 'selected' : '' ?>>Guardian</option>
                                         </select>
                                     </div>
-=======
-                        <div class="form-grid">
-                            <?php if (in_array('phone_number', $existingColumns)): ?>
-                            <div class="form-group">
-                                <label for="phone_number" class="form-label">Phone Number</label>
-                                <div class="input-icon-wrapper">
-                                    <i class="fas fa-phone input-icon"></i>
-                                    <input type="text" name="phone_number" id="phone_number" class="form-control input-with-icon" 
-                                           value="<?= htmlspecialchars($parentData['phone_number'] ?? '') ?>" 
-                                           pattern="[0-9]{10,15}" 
-                                           title="Please enter a valid phone number (10-15 digits)">
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                                 </div>
                             </div>
-                            <?php endif; ?>
 
-                            <?php if (in_array('relationship', $existingColumns)): ?>
                             <div class="form-group">
                                 <label for="address" class="form-label">Address</label>
                                 <div class="input-icon-wrapper">
-<<<<<<< HEAD
                                     <i class="fas fa-home input-icon" style="top: 1.25rem;"></i>
                                     <textarea name="address" id="address" rows="3" class="form-control input-with-icon" 
                                               placeholder="Enter full address" 
                                               required><?= htmlspecialchars($parentData['address'] ?? '') ?></textarea>
-=======
-                                    <i class="fas fa-user-friends input-icon"></i>
-                                    <select name="relationship" id="relationship" class="form-control input-with-icon">
-                                        <option value="">Select Relationship</option>
-                                        <option value="Father" <?= ($parentData['relationship'] ?? '') == 'Father' ? 'selected' : '' ?>>Father</option>
-                                        <option value="Mother" <?= ($parentData['relationship'] ?? '') == 'Mother' ? 'selected' : '' ?>>Mother</option>
-                                        <option value="Guardian" <?= ($parentData['relationship'] ?? '') == 'Guardian' ? 'selected' : '' ?>>Guardian</option>
-                                        <option value="Stepfather" <?= ($parentData['relationship'] ?? '') == 'Stepfather' ? 'selected' : '' ?>>Stepfather</option>
-                                        <option value="Stepmother" <?= ($parentData['relationship'] ?? '') == 'Stepmother' ? 'selected' : '' ?>>Stepmother</option>
-                                        <option value="Grandparent" <?= ($parentData['relationship'] ?? '') == 'Grandparent' ? 'selected' : '' ?>>Grandparent</option>
-                                        <option value="Other" <?= ($parentData['relationship'] ?? '') == 'Other' ? 'selected' : '' ?>>Other</option>
-                                    </select>
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                                 </div>
                             </div>
-                            <?php endif; ?>
                         </div>
 
-<<<<<<< HEAD
                         <!-- Password Section -->
                         <div class="form-section">
                             <h3><i class="fas fa-lock"></i> Password Settings</h3>
@@ -809,18 +644,8 @@ if ($parentData && !empty($parentData['user_id'])) {
                                                minlength="6">
                                     </div>
                                 </div>
-=======
-                        <?php if (in_array('address', $existingColumns)): ?>
-                        <div class="form-group">
-                            <label for="address" class="form-label">Address</label>
-                            <div class="input-icon-wrapper">
-                                <i class="fas fa-home input-icon" style="top: 1.25rem;"></i>
-                                <textarea name="address" id="address" rows="3" class="form-control input-with-icon" 
-                                          placeholder="Enter full address"><?= htmlspecialchars($parentData['address'] ?? '') ?></textarea>
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                             </div>
                         </div>
-                        <?php endif; ?>
 
                         <div class="form-actions">
                             <a href="parents.php" class="btn btn-secondary btn-icon">
@@ -846,7 +671,6 @@ if ($parentData && !empty($parentData['user_id'])) {
             const form = document.querySelector('form');
             if (form) {
                 form.addEventListener('submit', function(e) {
-<<<<<<< HEAD
                     const firstName = document.getElementById('first_name').value;
                     const lastName = document.getElementById('last_name').value;
                     const username = document.getElementById('username').value;
@@ -859,33 +683,17 @@ if ($parentData && !empty($parentData['user_id'])) {
 
                     // Check required fields
                     if (!firstName || !lastName || !username || !email || !phoneNumber || !relationship || !address) {
-=======
-                    // Get all visible form fields
-                    const fields = form.querySelectorAll('input[name], select[name], textarea[name]');
-                    let hasRequiredFields = false;
-                    
-                    fields.forEach(field => {
-                        if (field.style.display !== 'none' && !field.readOnly) {
-                            hasRequiredFields = true;
-                        }
-                    });
-
-                    if (!hasRequiredFields) {
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                         e.preventDefault();
-                        alert('No editable fields found. Please contact administrator.');
+                        alert('Please fill in all required fields.');
                         return false;
                     }
 
-                    // Validate phone number if present
-                    const phoneField = document.getElementById('phone_number');
-                    if (phoneField && phoneField.value) {
-                        const phoneRegex = /^[0-9]{10,15}$/;
-                        if (!phoneRegex.test(phoneField.value)) {
-                            e.preventDefault();
-                            alert('Please enter a valid phone number (10-15 digits only).');
-                            return false;
-                        }
+                    // Validate phone number format
+                    const phoneRegex = /^[0-9]{10,15}$/;
+                    if (!phoneRegex.test(phoneNumber)) {
+                        e.preventDefault();
+                        alert('Please enter a valid phone number (10-15 digits only).');
+                        return false;
                     }
 
                     // Validate email format
@@ -913,15 +721,11 @@ if ($parentData && !empty($parentData['user_id'])) {
                 });
 
                 // Real-time validation feedback
-<<<<<<< HEAD
                 const requiredFields = ['first_name', 'last_name', 'username', 'email', 'phone_number', 'relationship', 'address'];
-=======
-                const fields = ['first_name', 'last_name', 'phone_number', 'relationship', 'address'];
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                 
-                fields.forEach(fieldName => {
+                requiredFields.forEach(fieldName => {
                     const field = document.getElementById(fieldName);
-                    if (field && !field.readOnly) {
+                    if (field) {
                         field.addEventListener('blur', function() {
                             if (this.value.trim()) {
                                 this.style.borderColor = '#10b981';

@@ -17,7 +17,6 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
-<<<<<<< HEAD
 // Helper function to safely handle null values with htmlspecialchars
 function safeHtmlspecialchars($value, $default = '') {
     if ($value === null || $value === '') {
@@ -27,69 +26,39 @@ function safeHtmlspecialchars($value, $default = '') {
 }
 
 // Include all your existing functions from update_fees.php
-=======
-// Add error reporting for debugging
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
-// Debug: Check database connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
-
-// Check if students exist
-$debug_students = $conn->query("SELECT COUNT(*) as student_count FROM students");
-$student_count = $debug_students ? $debug_students->fetch_assoc()['student_count'] : 0;
-
-// Enhanced ensureIndividualFeeRecord function with better error handling
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
 function ensureIndividualFeeRecord($student_id, $conn) {
-    error_log("🔍 ensureIndividualFeeRecord: Starting for student $student_id");
-    
     // Check if student has their own fee record
     $checkQuery = "SELECT fee_id FROM fees WHERE student_id = ?";
     $stmt = $conn->prepare($checkQuery);
     if ($stmt === false) {
-        error_log("❌ ensureIndividualFeeRecord: Failed to prepare check query: " . $conn->error);
+        error_log("Failed to prepare check query: " . $conn->error);
         return false;
     }
     
     $stmt->bind_param("s", $student_id);
-    if (!$stmt->execute()) {
-        error_log("❌ ensureIndividualFeeRecord: Failed to execute check query: " . $stmt->error);
-        $stmt->close();
-        return false;
-    }
-    
+    $stmt->execute();
     $result = $stmt->get_result();
     
     if ($result->num_rows == 0) {
-        error_log("🔍 ensureIndividualFeeRecord: No fee record found, creating one for student $student_id");
-        
         // Create individual fee record for this student
         $insertQuery = "INSERT INTO fees (student_id, total_fee, amount_paid, due_date, payment_plan, status) 
                        VALUES (?, 1000.00, 0.00, DATE_ADD(CURDATE(), INTERVAL 1 MONTH), 'One-Time', 'Pending')";
         $insertStmt = $conn->prepare($insertQuery);
         if ($insertStmt === false) {
-            error_log("❌ ensureIndividualFeeRecord: Failed to prepare insert query: " . $conn->error);
+            error_log("Failed to prepare insert query: " . $conn->error);
             $stmt->close();
             return false;
         }
         
         $insertStmt->bind_param("s", $student_id);
         if (!$insertStmt->execute()) {
-            error_log("❌ ensureIndividualFeeRecord: Failed to create fee record for student {$student_id}: " . $insertStmt->error);
+            error_log("Failed to create individual fee record for student {$student_id}: " . $insertStmt->error);
             $insertStmt->close();
             $stmt->close();
             return false;
         }
-        
-        $new_fee_id = $conn->insert_id;
-        error_log("✅ ensureIndividualFeeRecord: Created fee record for student {$student_id} with fee_id: {$new_fee_id}");
         $insertStmt->close();
-    } else {
-        $existing_fee = $result->fetch_assoc();
-        error_log("✅ ensureIndividualFeeRecord: Fee record already exists for student {$student_id}: fee_id {$existing_fee['fee_id']}");
+        error_log("Created individual fee record for student {$student_id}");
     }
     
     $stmt->close();
@@ -122,34 +91,6 @@ function validateAndFixPaymentPlan($paymentPlan) {
     }
     
     return safeTruncateString($plan, 20);
-}
-
-// Function to get formatted student name
-function getFormattedStudentName($first_name, $last_name, $username, $student_id) {
-    $first_name = trim($first_name ?? '');
-    $last_name = trim($last_name ?? '');
-    $username = trim($username ?? '');
-    
-    // If we have both first and last name
-    if (!empty($first_name) && !empty($last_name)) {
-        return $first_name . ' ' . $last_name;
-    }
-    // If we have only first name
-    elseif (!empty($first_name)) {
-        return $first_name;
-    }
-    // If we have only last name
-    elseif (!empty($last_name)) {
-        return $last_name;
-    }
-    // If we have username
-    elseif (!empty($username)) {
-        return $username;
-    }
-    // Fallback to student ID
-    else {
-        return 'Student ' . $student_id;
-    }
 }
 
 function sendPaymentConfirmationEmail(
@@ -270,162 +211,48 @@ function sendPaymentConfirmationEmail(
 if (isset($_POST['ajax_action'])) {
     $action = $_POST['ajax_action'];
     
-    // Enhanced get_student_data handler with comprehensive debugging
     if ($action === 'get_student_data' && isset($_POST['student_id'])) {
         $student_id = $_POST['student_id'];
         
-        // Enhanced debugging
-        error_log("🔍 DEBUG: get_student_data called for student_id: $student_id");
+        // Ensure student has fee record
+        ensureIndividualFeeRecord($student_id, $conn);
         
-        // 1. First check if student exists
-        $student_check_query = "SELECT student_id, first_name, last_name, username, class FROM students WHERE student_id = ?";
-        $stmt_check = $conn->prepare($student_check_query);
-        
-        if (!$stmt_check) {
-            error_log("❌ ERROR: Failed to prepare student check query: " . $conn->error);
-            echo json_encode([
-                'success' => false, 
-                'message' => 'Database preparation error: ' . $conn->error
-            ]);
-            exit();
-        }
-        
-        $stmt_check->bind_param("s", $student_id);
-        $stmt_check->execute();
-        $student_check_result = $stmt_check->get_result();
-        
-        if ($student_check_result->num_rows === 0) {
-            error_log("❌ ERROR: Student not found: $student_id");
-            echo json_encode([
-                'success' => false, 
-                'message' => "Student with ID $student_id not found in database"
-            ]);
-            $stmt_check->close();
-            exit();
-        }
-        
-        $basic_student_data = $student_check_result->fetch_assoc();
-        error_log("✅ SUCCESS: Student found: " . print_r($basic_student_data, true));
-        $stmt_check->close();
-        
-        // 2. Try to ensure fee record exists
-        error_log("🔍 DEBUG: Calling ensureIndividualFeeRecord for student: $student_id");
-        $fee_record_result = ensureIndividualFeeRecord($student_id, $conn);
-        
-        if (!$fee_record_result) {
-            error_log("❌ ERROR: Failed to ensure fee record for student: $student_id");
-            echo json_encode([
-                'success' => false, 
-                'message' => 'Failed to create/verify fee record for student'
-            ]);
-            exit();
-        }
-        
-        error_log("✅ SUCCESS: Fee record ensured for student: $student_id");
-        
-        // 3. Get student data with fee information
+        // Get student data
         $query = "SELECT s.student_id, 
-                         s.first_name,
-                         s.last_name,
-                         s.username,
+                         CONCAT(COALESCE(s.first_name, ''), ' ', COALESCE(s.last_name, '')) AS student_name,
                          s.class,
                          COALESCE(f.total_fee, 0.00) AS total_fee,
                          COALESCE(f.amount_paid, 0.00) AS amount_paid,
-                         COALESCE(f.status, 'Pending') AS status,
+                         COALESCE(f.status, 'No Fee Assigned') AS status,
                          f.due_date,
                          f.payment_plan
                   FROM students s
                   LEFT JOIN fees f ON s.student_id = f.student_id
                   WHERE s.student_id = ?";
         
-        error_log("🔍 DEBUG: Executing main query for student: $student_id");
-        
         $stmt = $conn->prepare($query);
-        if (!$stmt) {
-            error_log("❌ ERROR: Failed to prepare main query: " . $conn->error);
-            echo json_encode([
-                'success' => false, 
-                'message' => 'Database query preparation error: ' . $conn->error
-            ]);
-            exit();
-        }
-        
         $stmt->bind_param("s", $student_id);
-        if (!$stmt->execute()) {
-            error_log("❌ ERROR: Failed to execute main query: " . $stmt->error);
-            echo json_encode([
-                'success' => false, 
-                'message' => 'Database query execution error: ' . $stmt->error
-            ]);
-            $stmt->close();
-            exit();
-        }
-        
+        $stmt->execute();
         $result = $stmt->get_result();
-        
-        if ($result->num_rows === 0) {
-            error_log("❌ ERROR: No data returned from main query for student: $student_id");
-            echo json_encode([
-                'success' => false, 
-                'message' => 'No student data found after fee record creation'
-            ]);
-            $stmt->close();
-            exit();
-        }
-        
         $student_data = $result->fetch_assoc();
-        error_log("✅ SUCCESS: Main query data: " . print_r($student_data, true));
-        $stmt->close();
         
-        // Format the student name
-        if ($student_data) {
-            $student_data['student_name'] = getFormattedStudentName(
-                $student_data['first_name'], 
-                $student_data['last_name'], 
-                $student_data['username'], 
-                $student_data['student_id']
-            );
-        } else {
-            error_log("❌ ERROR: student_data is null");
-            echo json_encode([
-                'success' => false, 
-                'message' => 'Student data is null after query'
-            ]);
-            exit();
-        }
-        
-        // 4. Get payment history
-        error_log("🔍 DEBUG: Getting payment history for student: $student_id");
-        
+        // Get payment history
         $paymentsQuery = "SELECT payment_date, amount, payment_method, received_by, created_at
                           FROM payments 
                           WHERE student_id = ? 
                           ORDER BY payment_date DESC";
         $stmt_payments = $conn->prepare($paymentsQuery);
+        $stmt_payments->bind_param("s", $student_id);
+        $stmt_payments->execute();
+        $paymentsResult = $stmt_payments->get_result();
+        $payments = $paymentsResult->fetch_all(MYSQLI_ASSOC);
         
-        if (!$stmt_payments) {
-            error_log("❌ WARNING: Failed to prepare payments query: " . $conn->error);
-            $payments = []; // Continue without payment history
-        } else {
-            $stmt_payments->bind_param("s", $student_id);
-            $stmt_payments->execute();
-            $paymentsResult = $stmt_payments->get_result();
-            $payments = $paymentsResult->fetch_all(MYSQLI_ASSOC);
-            $stmt_payments->close();
-            error_log("✅ SUCCESS: Found " . count($payments) . " payment records");
-        }
-        
-        // 5. Return successful response
-        $response_data = [
+        header('Content-Type: application/json');
+        echo json_encode([
             'success' => true,
             'student_data' => $student_data,
             'payments' => $payments
-        ];
-        
-        error_log("✅ SUCCESS: Sending response for student $student_id");
-        
-        header('Content-Type: application/json');
-        echo json_encode($response_data);
+        ]);
         exit();
     }
     
@@ -659,9 +486,9 @@ if (isset($_SESSION['message'])) {
 
 // --- HANDLE SORTING AND FILTERING PARAMETERS ---
 $sortable_columns = [
-    'student_name' => 'student_name_computed',
+    'student_name' => 'CONCAT(COALESCE(s.first_name, ""), " ", COALESCE(s.last_name, ""))',
     'class' => 's.class', 
-    'total_fee' => 'COALESCE(f.total_fee, 0)',
+    'total_fee' => 'f.total_fee',
     'amount_due' => '(COALESCE(f.total_fee, 0) - COALESCE(f.amount_paid, 0))',
     'due_date' => 'f.due_date'
 ];
@@ -669,17 +496,14 @@ $sortable_columns = [
 $sort_col_param = isset($_GET['sort']) && array_key_exists($_GET['sort'], $sortable_columns) ? $_GET['sort'] : 'class';
 $sort_col_sql = $sortable_columns[$sort_col_param];
 $sort_order = isset($_GET['order']) && strtolower($_GET['order']) == 'desc' ? 'DESC' : 'ASC';
-
-// FIXED: Properly handle filter parameters
-$filter_class = isset($_GET['filter_class']) && !empty(trim($_GET['filter_class'])) ? trim($_GET['filter_class']) : '';
-$filter_status = isset($_GET['filter_status']) && !empty(trim($_GET['filter_status'])) ? trim($_GET['filter_status']) : '';
+$filter_class = isset($_GET['filter_class']) ? $_GET['filter_class'] : '';
+$filter_status = isset($_GET['filter_status']) ? $_GET['filter_status'] : '';
 
 // --- DATA FETCHING AND PAGINATION ---
 $items_per_page = 15;
 $current_page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
 $current_page = max(1, $current_page);
 
-// FIXED: Build WHERE clause more carefully
 $where_clauses = [];
 $bind_params = [];
 $bind_types = '';
@@ -689,10 +513,9 @@ if (!empty($filter_class)) {
     $bind_params[] = $filter_class;
     $bind_types .= 's';
 }
-
 if (!empty($filter_status)) {
     if ($filter_status === 'No Fee Assigned') {
-        $where_clauses[] = "(f.fee_id IS NULL OR f.status IS NULL OR f.status = 'No Fee Assigned')";
+         $where_clauses[] = "(f.status IS NULL OR f.status = 'No Fee Assigned')";
     } else {
         $where_clauses[] = "f.status = ?";
         $bind_params[] = $filter_status;
@@ -702,11 +525,8 @@ if (!empty($filter_status)) {
 
 $where_sql = count($where_clauses) > 0 ? " WHERE " . implode(" AND ", $where_clauses) : "";
 
-// FIXED: Count query to count students, not fee records
-$count_query_sql = "SELECT COUNT(DISTINCT s.student_id) AS total_items 
-                    FROM students s 
-                    LEFT JOIN fees f ON s.student_id = f.student_id" . $where_sql;
-
+// Count query for pagination
+$count_query_sql = "SELECT COUNT(DISTINCT s.student_id) AS total_items FROM students s LEFT JOIN fees f ON s.student_id = f.student_id" . $where_sql;
 $stmt_count = $conn->prepare($count_query_sql);
 if ($stmt_count && !empty($bind_types)) {
     $stmt_count->bind_param($bind_types, ...$bind_params);
@@ -725,21 +545,12 @@ $total_pages = ($total_items > 0) ? ceil($total_items / $items_per_page) : 1;
 $current_page = min($current_page, $total_pages);
 $offset = ($current_page - 1) * $items_per_page;
 
-// UPDATED MAIN QUERY - Better handling of student names
+// FIXED QUERY - Use first_name and last_name instead of username
 $query_fees_overview = "
     SELECT
         s.student_id, 
-        s.first_name,
-        s.last_name,
-        s.username,
-        CASE 
-            WHEN TRIM(CONCAT(COALESCE(s.first_name, ''), ' ', COALESCE(s.last_name, ''))) != '' 
-            THEN TRIM(CONCAT(COALESCE(s.first_name, ''), ' ', COALESCE(s.last_name, '')))
-            WHEN s.username IS NOT NULL AND s.username != '' 
-            THEN s.username
-            ELSE CONCAT('Student ', s.student_id)
-        END AS student_name_computed,
-        COALESCE(s.class, 'N/A') as class,
+        CONCAT(COALESCE(s.first_name, ''), ' ', COALESCE(s.last_name, '')) AS student_name,
+        s.class,
         (SELECT GROUP_CONCAT(CONCAT(u.username, ' (', p.relationship, ')') ORDER BY p.parent_id SEPARATOR ', ') 
          FROM parents p 
          INNER JOIN users u ON p.user_id = u.id 
@@ -752,151 +563,34 @@ $query_fees_overview = "
     FROM students s
     LEFT JOIN fees f ON s.student_id = f.student_id
     {$where_sql}
-    ORDER BY {$sort_col_sql} {$sort_order}, s.student_id ASC
+    ORDER BY {$sort_col_sql} {$sort_order}, CONCAT(COALESCE(s.first_name, ''), ' ', COALESCE(s.last_name, '')) ASC
     LIMIT ? OFFSET ?";
 
 $final_bind_params = array_merge($bind_params, [$items_per_page, $offset]);
 $final_bind_types = $bind_types . 'ii';
 
 $stmt = $conn->prepare($query_fees_overview);
-$fees_overview_result = null;
-
 if ($stmt) {
     if (!empty($final_bind_types)) {
         $stmt->bind_param($final_bind_types, ...$final_bind_params);
     }
-    if ($stmt->execute()) {
-        $fees_overview_result = $stmt->get_result();
-    } else {
-        $fees_overview_message = "Error executing query: " . htmlspecialchars($stmt->error);
-        $fees_overview_message_type = 'error';
-        error_log("Query execution failed: " . $stmt->error);
-    }
-    $stmt->close();
+    $stmt->execute();
+    $fees_overview_result = $stmt->get_result();
 } else {
     $fees_overview_message = "Error preparing data query: " . htmlspecialchars($conn->error);
     $fees_overview_message_type = 'error';
     $fees_overview_result = null;
-    error_log("Failed to prepare main query: " . $conn->error);
 }
 
-// Get classes for filter dropdown - FIXED to handle empty results
+// Safely get classes and handle potential errors
 $classes_result = $conn->query("SELECT DISTINCT class FROM students WHERE class IS NOT NULL AND class != '' ORDER BY class ASC");
-$classes = [];
-if ($classes_result) {
-    $classes = $classes_result->fetch_all(MYSQLI_ASSOC);
-}
+$classes = $classes_result ? $classes_result->fetch_all(MYSQLI_ASSOC) : [];
 
 $statuses = ['Cleared', 'Overdue', 'Pending', 'No Fee Assigned'];
 
 // Include header AFTER all logic, before any HTML output.
 include 'sa_header.php';
 ?>
-
-<!-- Add the modal HTML and JavaScript -->
-<div id="studentModal" class="modal-overlay">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 class="modal-title">Update Student Fee Details</h2>
-            <button type="button" class="modal-close" onclick="closeModal()">&times;</button>
-        </div>
-        <div class="modal-body">
-            <div id="modalStudentInfo">
-                <!-- Student info will be loaded here -->
-            </div>
-            
-            <div class="fee-summary" id="feeSummary">
-                <!-- Fee summary will be loaded here -->
-            </div>
-            
-            <div class="form-section">
-                <h3 class="form-section-title">
-                    <i class="fas fa-edit"></i>
-                    Update Fee Structure
-                </h3>
-                <form id="updateFeeForm">
-                    <input type="hidden" id="modalStudentId" name="student_id">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label" for="totalFee">Total Fee ($):</label>
-                            <input type="number" id="totalFee" name="total_fee" class="form-control" step="0.01" min="0" required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="amountPaid">Amount Paid ($):</label>
-                            <input type="number" id="amountPaid" name="amount_paid" class="form-control" step="0.01" min="0" required>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label" for="dueDate">Due Date:</label>
-                            <input type="date" id="dueDate" name="due_date" class="form-control" required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="paymentPlan">Payment Plan:</label>
-                            <select id="paymentPlan" name="payment_plan" class="form-control" required>
-                                <option value="One-Time">One-Time</option>
-                                <option value="Monthly">Monthly</option>
-                                <option value="Quarterly">Quarterly</option>
-                                <option value="Semi-Annual">Semi-Annual</option>
-                                <option value="Annual">Annual</option>
-                                <option value="Weekly">Weekly</option>
-                                <option value="Bi-Weekly">Bi-Weekly</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="modal-actions">
-                        <button type="submit" class="btn btn-success">
-                            <i class="fas fa-save"></i> Update Fee Structure
-                        </button>
-                    </div>
-                </form>
-            </div>
-            
-            <div class="form-section">
-                <h3 class="form-section-title">
-                    <i class="fas fa-credit-card"></i>
-                    Record New Payment
-                </h3>
-                <form id="recordPaymentForm">
-                    <input type="hidden" id="paymentStudentId" name="student_id">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label" for="paymentAmount">Payment Amount ($):</label>
-                            <input type="number" id="paymentAmount" name="new_payment_amount" class="form-control" step="0.01" min="0.01" required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="paymentMethod">Payment Method:</label>
-                            <select id="paymentMethod" name="payment_method" class="form-control" required>
-                                <option value="">Select Payment Method</option>
-                                <option value="Cash">Cash</option>
-                                <option value="Bank Transfer">Bank Transfer</option>
-                                <option value="Mobile Money">Mobile Money</option>
-                                <option value="Check">Check</option>
-                                <option value="Credit Card">Credit Card</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="modal-actions">
-                        <button type="submit" class="btn btn-success">
-                            <i class="fas fa-plus"></i> Record Payment
-                        </button>
-                    </div>
-                </form>
-            </div>
-            
-            <div class="payment-history">
-                <h3 class="form-section-title">
-                    <i class="fas fa-history"></i>
-                    Payment History
-                </h3>
-                <div id="paymentHistoryTable">
-                    <!-- Payment history will be loaded here -->
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
 <style>
 /* =================================================================== */
@@ -1476,23 +1170,12 @@ body {
                                     'No Fee Assigned' => 'fas fa-minus-circle'
                                 ];
                                 $icon_class = $status_icons[$row['status']] ?? 'fas fa-question-circle';
-                                
-                                // Use the computed student name from the query
-                                $student_display_name = $row['student_name_computed'];
                             ?>
-<<<<<<< HEAD
                             <tr data-student-id="<?= safeHtmlspecialchars($row['student_id']); ?>">
                                 <td><input type="checkbox" name="selected_ids[]" value="<?= safeHtmlspecialchars($row['student_id']); ?>" class="row-checkbox"></td>
                                 <td><?= safeHtmlspecialchars(trim($row['student_name'])); ?></td>
                                 <td><?= safeHtmlspecialchars($row['class']); ?></td>
                                 <td><?= safeHtmlspecialchars($row['parent_name'], 'N/A'); ?></td>
-=======
-                            <tr data-student-id="<?= htmlspecialchars($row['student_id']); ?>">
-                                <td><input type="checkbox" name="selected_ids[]" value="<?= htmlspecialchars($row['student_id']); ?>" class="row-checkbox"></td>
-                                <td><?= htmlspecialchars($student_display_name); ?></td>
-                                <td><?= htmlspecialchars($row['class']); ?></td>
-                                <td><?= htmlspecialchars($row['parent_name'] ?? 'N/A'); ?></td>
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                                 <td class="total-fee-cell">$<?= htmlspecialchars(number_format(floatval($row['total_fee']), 2)); ?></td>
                                 <td class="amount-paid-cell">$<?= htmlspecialchars(number_format(floatval($row['amount_paid']), 2)); ?></td>
                                 <td class="amount-due-cell <?= $amount_due > 0 ? 'amount-due' : ''; ?>">$<?= htmlspecialchars(number_format($amount_due, 2)); ?></td>
@@ -1509,13 +1192,8 @@ body {
                                 <td class="action-cell">
                                     <div class="action-buttons">
                                         <button type="button" class="btn btn-primary btn-sm update-fee-btn" 
-<<<<<<< HEAD
                                                 data-student-id="<?= safeHtmlspecialchars($row['student_id']); ?>" 
                                                 data-student-name="<?= safeHtmlspecialchars(trim($row['student_name'])); ?>"
-=======
-                                                data-student-id="<?= htmlspecialchars($row['student_id']); ?>" 
-                                                data-student-name="<?= htmlspecialchars($student_display_name); ?>"
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                                                 title="Update Fee Details">
                                             <i class="fas fa-edit"></i> Update
                                         </button>
@@ -1525,11 +1203,7 @@ body {
                                             <a href="send_reminder.php?student_id=<?= safeHtmlspecialchars($row['student_id']); ?>" 
                                                class="btn btn-warning btn-sm" 
                                                title="Send Reminder Email" 
-<<<<<<< HEAD
                                                onclick="return confirm('Are you sure you want to send a fee reminder email for <?= safeHtmlspecialchars(trim($row['student_name'])); ?>?');">
-=======
-                                               onclick="return confirm('Are you sure you want to send a fee reminder email for <?= htmlspecialchars($student_display_name); ?>?');">
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
                                                 <i class="fas fa-envelope"></i> Reminder
                                             </a>
                                         <?php endif; ?>
@@ -1539,15 +1213,7 @@ body {
                         <?php endwhile; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="10" style="text-align:center; padding: 3rem; font-size: 1.1em; color: #777;">
-                                <?php if ($student_count == 0): ?>
-                                    No students found in the database. Please add students first.
-                                <?php elseif (!empty($filter_class) || !empty($filter_status)): ?>
-                                    No students match the selected filters. <a href="fees.php">Reset filters</a> to see all students.
-                                <?php else: ?>
-                                    No student records found.
-                                <?php endif; ?>
-                            </td>
+                            <td colspan="10" style="text-align:center; padding: 3rem; font-size: 1.1em; color: #777;">No fee records found for the selected filters.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -1586,150 +1252,284 @@ body {
     <?php endif; ?>
 </div>
 
+<!-- Modal for Fee Updates -->
+<div class="modal-overlay" id="feeModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title" id="modalTitle">Update Student Fees</h2>
+            <button class="modal-close" id="closeModal">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div id="modalNotification"></div>
+            
+            <!-- Fee Summary -->
+            <div class="fee-summary" id="feeSummary">
+                <div class="fee-stat">
+                    <div class="fee-stat-label">Total Fee</div>
+                    <div class="fee-stat-value" id="summaryTotalFee">$0.00</div>
+                </div>
+                <div class="fee-stat">
+                    <div class="fee-stat-label">Amount Paid</div>
+                    <div class="fee-stat-value" id="summaryAmountPaid">$0.00</div>
+                </div>
+                <div class="fee-stat">
+                    <div class="fee-stat-label">Balance</div>
+                    <div class="fee-stat-value fee-stat-balance" id="summaryBalance">$0.00</div>
+                </div>
+                <div class="fee-stat">
+                    <div class="fee-stat-label">Status</div>
+                    <div class="fee-stat-value">
+                        <span id="summaryStatus" class="status-pill">Pending</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Update Fee Structure Form -->
+            <div class="form-section">
+                <h3 class="form-section-title">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    Update Fee Structure
+                </h3>
+                <form id="feeStructureForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Total Fee</label>
+                            <input type="number" class="form-control" id="totalFee" name="total_fee" step="0.01" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Amount Paid</label>
+                            <input type="number" class="form-control" id="amountPaid" name="amount_paid" step="0.01" min="0" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Due Date</label>
+                            <input type="date" class="form-control" id="dueDate" name="due_date" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Payment Plan</label>
+                            <select class="form-control" id="paymentPlan" name="payment_plan" required>
+                                <option value="One-Time">One-Time Payment</option>
+                                <option value="Monthly">Monthly Installments</option>
+                                <option value="Quarterly">Quarterly Installments</option>
+                                <option value="Term">Per Term</option>
+                                <option value="Custom">Custom</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Update Fee Details
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Record New Payment Form -->
+            <div class="form-section">
+                <h3 class="form-section-title">
+                    <i class="fas fa-plus-circle"></i>
+                    Record New Payment
+                </h3>
+                <form id="paymentForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Payment Amount</label>
+                            <input type="number" class="form-control" id="paymentAmount" name="new_payment_amount" step="0.01" min="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Payment Method</label>
+                            <select class="form-control" id="paymentMethod" name="payment_method" required>
+                                <option value="">Select Method</option>
+                                <option value="Cash">Cash</option>
+                                <option value="Bank Transfer">Bank Transfer</option>
+                                <option value="Mobile Money">Mobile Money</option>
+                                <option value="Card Payment">Card Payment</option>
+                                <option value="Online Payment">Online Payment</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-dollar-sign"></i> Record Payment
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Payment History -->
+            <div class="payment-history">
+                <h3 class="form-section-title">
+                    <i class="fas fa-history"></i>
+                    Payment History
+                </h3>
+                <div id="paymentHistoryContainer">
+                    <!-- Payment history will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
-// Modal functionality
-function closeModal() {
-    document.getElementById('studentModal').classList.remove('active');
-}
+let currentStudentId = null;
 
-// Open modal when update button is clicked
 document.addEventListener('DOMContentLoaded', function() {
-    // Handle Update Fee buttons
-    document.querySelectorAll('.update-fee-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const studentId = this.dataset.studentId;
-            const studentName = this.dataset.studentName;
-            
-            // Update modal title
-            document.querySelector('.modal-title').textContent = `Update Fee Details - ${studentName}`;
-            
-            // Show loading state
-            document.getElementById('studentModal').classList.add('active');
-            document.getElementById('modalStudentInfo').innerHTML = '<div class="spinner"></div> Loading student data...';
-            
-            // Fetch student data
-            fetchStudentData(studentId);
-        });
-    });
-    
-    // Handle select all checkbox
+    // Select all checkbox functionality
     const selectAllCheckbox = document.getElementById('select-all-checkbox');
-    const rowCheckboxes = document.querySelectorAll('.row-checkbox');
-    
-    selectAllCheckbox.addEventListener('change', function() {
-        rowCheckboxes.forEach(checkbox => {
-            checkbox.checked = this.checked;
+    if (selectAllCheckbox) {
+        const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+        selectAllCheckbox.addEventListener('change', function() {
+            rowCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+        });
+    }
+
+    // Modal functionality
+    const modal = document.getElementById('feeModal');
+    const closeModalBtn = document.getElementById('closeModal');
+    const updateButtons = document.querySelectorAll('.update-fee-btn');
+
+    // Event listeners for update buttons
+    updateButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const studentId = this.getAttribute('data-student-id');
+            const studentName = this.getAttribute('data-student-name');
+            openModal(studentId, studentName);
         });
     });
-    
-    // Handle individual checkboxes
-    rowCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            const allChecked = Array.from(rowCheckboxes).every(cb => cb.checked);
-            const noneChecked = Array.from(rowCheckboxes).every(cb => !cb.checked);
-            
-            selectAllCheckbox.checked = allChecked;
-            selectAllCheckbox.indeterminate = !allChecked && !noneChecked;
-        });
-    });
-    
-    // Handle form submissions
-    document.getElementById('updateFeeForm').addEventListener('submit', handleUpdateFeeForm);
-    document.getElementById('recordPaymentForm').addEventListener('submit', handleRecordPaymentForm);
-    
-    // Close modal when clicking outside
-    document.getElementById('studentModal').addEventListener('click', function(e) {
-        if (e.target === this) {
+
+    // Close modal events
+    closeModalBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
             closeModal();
         }
     });
-});
 
-function fetchStudentData(studentId) {
-    const formData = new FormData();
-    formData.append('ajax_action', 'get_student_data');
-    formData.append('student_id', studentId);
-    
-    fetch('', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            populateModal(data.student_data, data.payments);
-        } else {
-            alert('Error loading student data: ' + (data.message || 'Unknown error'));
+    // ESC key to close modal
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modal.classList.contains('active')) {
             closeModal();
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error loading student data. Please try again.');
-        closeModal();
     });
-}
 
-function populateModal(studentData, payments) {
-    // Populate student info
-    document.getElementById('modalStudentInfo').innerHTML = `
-        <h3>Student: ${studentData.student_name}</h3>
-        <p><strong>Student ID:</strong> ${studentData.student_id}</p>
-        <p><strong>Class:</strong> ${studentData.class || 'N/A'}</p>
-    `;
-    
-    // Populate fee summary
-    const totalFee = parseFloat(studentData.total_fee) || 0;
-    const amountPaid = parseFloat(studentData.amount_paid) || 0;
-    const balance = totalFee - amountPaid;
-    
-    document.getElementById('feeSummary').innerHTML = `
-        <div class="fee-stat">
-            <div class="fee-stat-label">Total Fee</div>
-            <div class="fee-stat-value">${totalFee.toFixed(2)}</div>
-        </div>
-        <div class="fee-stat">
-            <div class="fee-stat-label">Amount Paid</div>
-            <div class="fee-stat-value">${amountPaid.toFixed(2)}</div>
-        </div>
-        <div class="fee-stat">
-            <div class="fee-stat-label">Balance</div>
-            <div class="fee-stat-value fee-stat-balance ${balance > 0 ? 'negative' : 'positive'}">${balance.toFixed(2)}</div>
-        </div>
-        <div class="fee-stat">
-            <div class="fee-stat-label">Status</div>
-            <div class="fee-stat-value">${studentData.status}</div>
-        </div>
-    `;
-    
-    // Populate form fields
-    document.getElementById('modalStudentId').value = studentData.student_id;
-    document.getElementById('paymentStudentId').value = studentData.student_id;
-    document.getElementById('totalFee').value = totalFee.toFixed(2);
-    document.getElementById('amountPaid').value = amountPaid.toFixed(2);
-    document.getElementById('dueDate').value = studentData.due_date || '';
-    document.getElementById('paymentPlan').value = studentData.payment_plan || 'One-Time';
-    
-    // Populate payment history
-    let paymentHistoryHtml = '';
-    if (payments && payments.length > 0) {
-        paymentHistoryHtml = `
+    function openModal(studentId, studentName) {
+        currentStudentId = studentId;
+        
+        // Update modal title
+        document.getElementById('modalTitle').textContent = `Update Fees - ${studentName}`;
+        
+        // Load student data
+        loadStudentData(studentId);
+        
+        // Show modal
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+        modal.classList.remove('active');
+        document.body.style.overflow = 'auto';
+        currentStudentId = null;
+        
+        // Clear any notifications
+        document.getElementById('modalNotification').innerHTML = '';
+    }
+
+    function loadStudentData(studentId) {
+        const formData = new FormData();
+        formData.append('ajax_action', 'get_student_data');
+        formData.append('student_id', studentId);
+
+        fetch('', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                populateModal(data.student_data, data.payments);
+            } else {
+                showNotification('Error loading student data', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error loading student data', 'error');
+        });
+    }
+
+    function populateModal(studentData, payments) {
+        // Populate form fields
+        document.getElementById('totalFee').value = parseFloat(studentData.total_fee || 0).toFixed(2);
+        document.getElementById('amountPaid').value = parseFloat(studentData.amount_paid || 0).toFixed(2);
+        document.getElementById('dueDate').value = studentData.due_date || '';
+        document.getElementById('paymentPlan').value = studentData.payment_plan || 'One-Time';
+        
+        // Update summary
+        updateSummaryDisplay(studentData);
+        
+        // Load payment history
+        loadPaymentHistory(payments);
+        
+        // Clear payment form
+        document.getElementById('paymentForm').reset();
+        
+        // Setup real-time updates
+        setupRealTimeUpdates();
+    }
+
+    function updateSummaryDisplay(data) {
+        const totalFee = parseFloat(data.total_fee || 0);
+        const amountPaid = parseFloat(data.amount_paid || 0);
+        const balance = Math.max(0, totalFee - amountPaid);
+        
+        document.getElementById('summaryTotalFee').textContent = `${totalFee.toFixed(2)}`;
+        document.getElementById('summaryAmountPaid').textContent = `${amountPaid.toFixed(2)}`;
+        
+        const balanceEl = document.getElementById('summaryBalance');
+        balanceEl.textContent = `${balance.toFixed(2)}`;
+        balanceEl.className = `fee-stat-value fee-stat-balance ${balance <= 0 ? 'positive' : 'negative'}`;
+        
+        const statusEl = document.getElementById('summaryStatus');
+        statusEl.textContent = data.status || 'Pending';
+        statusEl.className = `status-pill status-${(data.status || 'pending').toLowerCase().replace(' ', '-')}`;
+    }
+
+    function loadPaymentHistory(payments) {
+        const container = document.getElementById('paymentHistoryContainer');
+        
+        if (!payments || payments.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #6b7280; padding: 20px;">No payment history found.</p>';
+            return;
+        }
+        
+        let historyHTML = `
             <table class="payment-history-table">
                 <thead>
                     <tr>
                         <th>Date</th>
                         <th>Amount</th>
                         <th>Method</th>
-                        <th>Received By</th>
+                        <th>Recorded By</th>
                     </tr>
                 </thead>
                 <tbody>
         `;
         
         payments.forEach(payment => {
-            paymentHistoryHtml += `
+            const paymentDate = new Date(payment.payment_date).toLocaleDateString('en-US', {
+                month: 'short', day: 'numeric', year: 'numeric'
+            });
+            
+            historyHTML += `
                 <tr>
-                    <td>${payment.payment_date}</td>
+                    <td>${paymentDate}</td>
                     <td>${parseFloat(payment.amount).toFixed(2)}</td>
                     <td>${payment.payment_method}</td>
                     <td>${payment.received_by}</td>
@@ -1737,139 +1537,246 @@ function populateModal(studentData, payments) {
             `;
         });
         
-        paymentHistoryHtml += '</tbody></table>';
-    } else {
-        paymentHistoryHtml = '<p>No payment history found.</p>';
+        historyHTML += '</tbody></table>';
+        container.innerHTML = historyHTML;
     }
-    
-    document.getElementById('paymentHistoryTable').innerHTML = paymentHistoryHtml;
-}
 
-function handleUpdateFeeForm(e) {
-    e.preventDefault();
-    
-    const formData = new FormData(e.target);
-    formData.append('ajax_action', 'update_fee_structure');
-    
-    // Disable form while processing
-    e.target.classList.add('loading');
-    
-    fetch('', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        e.target.classList.remove('loading');
+    function setupRealTimeUpdates() {
+        const totalFeeInput = document.getElementById('totalFee');
+        const amountPaidInput = document.getElementById('amountPaid');
         
-        if (data.success) {
-            alert(data.message);
+        function updateLiveSummary() {
+            const totalFee = parseFloat(totalFeeInput.value) || 0;
+            const amountPaid = parseFloat(amountPaidInput.value) || 0;
+            const balance = Math.max(0, totalFee - amountPaid);
             
-            // Update the table row with new data
-            const studentId = formData.get('student_id');
-            updateTableRow(studentId, data.updated_data);
+            document.getElementById('summaryTotalFee').textContent = `${totalFee.toFixed(2)}`;
+            document.getElementById('summaryAmountPaid').textContent = `${amountPaid.toFixed(2)}`;
             
-            // Refresh modal data
-            fetchStudentData(studentId);
-        } else {
-            alert('Error: ' + (data.message || 'Unknown error occurred'));
+            const balanceEl = document.getElementById('summaryBalance');
+            balanceEl.textContent = `${balance.toFixed(2)}`;
+            balanceEl.className = `fee-stat-value fee-stat-balance ${balance <= 0 ? 'positive' : 'negative'}`;
+            
+            // Update status preview
+            let status = 'Pending';
+            if (totalFee > 0 && amountPaid >= totalFee) {
+                status = 'Cleared';
+            } else if (totalFee > 0 && amountPaid > 0) {
+                status = 'Partial';
+            }
+            
+            const statusEl = document.getElementById('summaryStatus');
+            statusEl.textContent = status;
+            statusEl.className = `status-pill status-${status.toLowerCase()}`;
         }
-    })
-    .catch(error => {
-        e.target.classList.remove('loading');
-        console.error('Error:', error);
-        alert('Error updating fee structure. Please try again.');
-    });
-}
-
-function handleRecordPaymentForm(e) {
-    e.preventDefault();
-    
-    const formData = new FormData(e.target);
-    formData.append('ajax_action', 'record_payment');
-    
-    // Disable form while processing
-    e.target.classList.add('loading');
-    
-    fetch('', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        e.target.classList.remove('loading');
         
-        if (data.success) {
-            alert(data.message);
-            
-            // Clear the payment form
-            e.target.reset();
-            document.getElementById('paymentStudentId').value = formData.get('student_id');
-            
-            // Update the table row with new data
-            const studentId = formData.get('student_id');
-            updateTableRow(studentId, data.updated_data);
-            
-            // Refresh modal data
-            fetchStudentData(studentId);
+        totalFeeInput.addEventListener('input', updateLiveSummary);
+        amountPaidInput.addEventListener('input', updateLiveSummary);
+    }
+
+    function showNotification(message, type = 'success') {
+        const notification = document.getElementById('modalNotification');
+        const iconClass = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-triangle' : 'fa-info-circle';
+        
+        notification.innerHTML = `
+            <div class="notification ${type}">
+                <i class="fas ${iconClass}"></i> ${message}
+            </div>
+        `;
+        
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            notification.innerHTML = '';
+        }, 5000);
+    }
+
+    function setLoading(formId, isLoading) {
+        const form = document.getElementById(formId);
+        const submitBtn = form.querySelector('button[type="submit"]');
+        
+        if (isLoading) {
+            form.classList.add('loading');
+            const originalHTML = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<span class="spinner"></span> Processing...';
+            submitBtn.disabled = true;
+            submitBtn.dataset.originalHtml = originalHTML;
         } else {
-            alert('Error: ' + (data.message || 'Unknown error occurred'));
+            form.classList.remove('loading');
+            submitBtn.innerHTML = submitBtn.dataset.originalHtml || submitBtn.innerHTML.replace('<span class="spinner"></span> Processing...', '');
+            submitBtn.disabled = false;
         }
-    })
-    .catch(error => {
-        e.target.classList.remove('loading');
-        console.error('Error:', error);
-        alert('Error recording payment. Please try again.');
-    });
-}
+    }
 
-function updateTableRow(studentId, updatedData) {
-    const row = document.querySelector(`tr[data-student-id="${studentId}"]`);
-    if (!row) return;
-    
-    // Update total fee
-    const totalFeeCell = row.querySelector('.total-fee-cell');
-    if (totalFeeCell && updatedData.total_fee !== undefined) {
-        totalFeeCell.textContent = `${parseFloat(updatedData.total_fee).toFixed(2)}`;
-    }
-    
-    // Update amount paid
-    const amountPaidCell = row.querySelector('.amount-paid-cell');
-    if (amountPaidCell && updatedData.amount_paid !== undefined) {
-        amountPaidCell.textContent = `${parseFloat(updatedData.amount_paid).toFixed(2)}`;
-    }
-    
-    // Update amount due
-    const amountDueCell = row.querySelector('.amount-due-cell');
-    if (amountDueCell && updatedData.total_fee !== undefined && updatedData.amount_paid !== undefined) {
-        const amountDue = parseFloat(updatedData.total_fee) - parseFloat(updatedData.amount_paid);
-        amountDueCell.textContent = `${amountDue.toFixed(2)}`;
-        amountDueCell.className = `amount-due-cell ${amountDue > 0 ? 'amount-due' : ''}`;
-    }
-    
-    // Update status
-    const statusCell = row.querySelector('.status-cell');
-    if (statusCell && updatedData.status) {
-        const statusClass = updatedData.status.toLowerCase().replace(/\s+/g, '-');
-        const statusIcons = {
-            'cleared': 'fas fa-check-circle',
-            'overdue': 'fas fa-exclamation-triangle',
-            'pending': 'fas fa-hourglass-half',
-            'no-fee-assigned': 'fas fa-minus-circle'
-        };
-        const iconClass = statusIcons[statusClass] || 'fas fa-question-circle';
+    function updateMainTableRow(studentId, data) {
+        const row = document.querySelector(`tr[data-student-id="${studentId}"]`);
+        if (!row) return;
         
+        // Update cells
+        row.querySelector('.total-fee-cell').textContent = `${parseFloat(data.total_fee).toFixed(2)}`;
+        row.querySelector('.amount-paid-cell').textContent = `${parseFloat(data.amount_paid).toFixed(2)}`;
+        
+        const balance = Math.max(0, data.total_fee - data.amount_paid);
+        const amountDueCell = row.querySelector('.amount-due-cell');
+        amountDueCell.textContent = `${balance.toFixed(2)}`;
+        amountDueCell.className = balance > 0 ? 'amount-due-cell amount-due' : 'amount-due-cell';
+        
+        // Update status
+        const statusCell = row.querySelector('.status-cell');
+        const statusClass = data.status.toLowerCase().replace(' ', '-');
+        const statusIcon = getStatusIcon(data.status);
         statusCell.innerHTML = `
             <span class="status-pill status-${statusClass}">
-                <i class="${iconClass}"></i>
-                <span>${updatedData.status}</span>
+                <i class="${statusIcon}"></i>
+                <span>${data.status}</span>
             </span>
         `;
+        
+        // Update due date if provided
+        if (data.due_date) {
+            const dueDateCell = row.querySelector('.due-date-cell');
+            const dueDate = new Date(data.due_date);
+            dueDateCell.textContent = dueDate.toLocaleDateString('en-US', {
+                month: 'short', day: 'numeric', year: 'numeric'
+            });
+        }
+        
+        // Flash row to show update
+        row.style.backgroundColor = '#d4edda';
+        setTimeout(() => {
+            row.style.backgroundColor = '';
+        }, 2000);
     }
-}
+
+    function getStatusIcon(status) {
+        const icons = {
+            'Cleared': 'fas fa-check-circle',
+            'Pending': 'fas fa-hourglass-half',
+            'Overdue': 'fas fa-exclamation-triangle',
+            'Partial': 'fas fa-clock',
+            'No Fee Assigned': 'fas fa-minus-circle'
+        };
+        return icons[status] || 'fas fa-question-circle';
+    }
+
+    // Form submission handlers
+    document.getElementById('feeStructureForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        setLoading('feeStructureForm', true);
+        
+        const formData = new FormData(this);
+        formData.append('ajax_action', 'update_fee_structure');
+        formData.append('student_id', currentStudentId);
+        
+        // Client-side validation
+        const totalFee = parseFloat(formData.get('total_fee'));
+        const amountPaid = parseFloat(formData.get('amount_paid'));
+        
+        if (amountPaid > totalFee) {
+            setLoading('feeStructureForm', false);
+            showNotification('Amount paid cannot be greater than total fee.', 'error');
+            return;
+        }
+        
+        if (totalFee < 0 || amountPaid < 0) {
+            setLoading('feeStructureForm', false);
+            showNotification('Fee amounts cannot be negative.', 'error');
+            return;
+        }
+        
+        fetch('', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            setLoading('feeStructureForm', false);
+            
+            if (data.success) {
+                showNotification(data.message);
+                updateMainTableRow(currentStudentId, data.updated_data);
+                
+                // Update summary with new data
+                updateSummaryDisplay(data.updated_data);
+            } else {
+                showNotification(data.message, 'error');
+            }
+        })
+        .catch(error => {
+            setLoading('feeStructureForm', false);
+            console.error('Error:', error);
+            showNotification('An error occurred while updating fee details.', 'error');
+        });
+    });
+
+    document.getElementById('paymentForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        setLoading('paymentForm', true);
+        
+        const formData = new FormData(this);
+        formData.append('ajax_action', 'record_payment');
+        formData.append('student_id', currentStudentId);
+        
+        const paymentAmount = parseFloat(formData.get('new_payment_amount'));
+        if (paymentAmount <= 0) {
+            setLoading('paymentForm', false);
+            showNotification('Payment amount must be greater than zero.', 'error');
+            return;
+        }
+        
+        fetch('', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            setLoading('paymentForm', false);
+            
+            if (data.success) {
+                showNotification(data.message);
+                updateMainTableRow(currentStudentId, data.updated_data);
+                
+                // Update summary with new data
+                updateSummaryDisplay(data.updated_data);
+                
+                // Reload payment history
+                loadStudentData(currentStudentId);
+                
+                // Clear form
+                this.reset();
+            } else {
+                showNotification(data.message, 'error');
+            }
+        })
+        .catch(error => {
+            setLoading('paymentForm', false);
+            console.error('Error:', error);
+            showNotification('An error occurred while recording payment.', 'error');
+        });
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        if (modal.classList.contains('active')) {
+            // Ctrl/Cmd + S to save fee structure
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                document.getElementById('feeStructureForm').dispatchEvent(new Event('submit'));
+            }
+            
+            // Ctrl/Cmd + P to focus payment amount
+            if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+                e.preventDefault();
+                document.getElementById('paymentAmount').focus();
+            }
+        }
+    });
+});
 </script>
 
 <?php
-// Include footer if you have one
-// include 'sa_footer.php';
+// Clean up and close statements
+if (isset($stmt)) $stmt->close();
+
+// Include the footer
+include 'sa_footer.php';
 ?>
