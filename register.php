@@ -16,7 +16,6 @@ if (!isset($_SESSION['registration_attempts'])) {
     $_SESSION['registration_attempts'] = [];
 }
 
-<<<<<<< HEAD
 // Check if user is logged in and get their role
 $is_admin = false;
 $user_role = '';
@@ -24,7 +23,6 @@ if (isset($_SESSION['user_id']) && isset($_SESSION['role'])) {
     $user_role = $_SESSION['role'];
     $is_admin = ($user_role === 'admin');
 }
-=======
 // Clean old attempts (older than 1 hour)
 $current_time = time();
 $_SESSION['registration_attempts'] = array_filter($_SESSION['registration_attempts'], function($attempt_time) use ($current_time) {
@@ -47,7 +45,6 @@ if (empty($_SESSION['csrf_token']) || empty($_SESSION['csrf_timestamp']) || (tim
 
 // Honeypot field for bot detection
 $honeypot_field = 'website_url_' . substr($_SESSION['csrf_token'], 0, 8);
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -55,7 +52,7 @@ $honeypot_field = 'website_url_' . substr($_SESSION['csrf_token'], 0, 8);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
-    <title>Secure Registration - Wisetech College Portal</title>
+    <title>Secure Registration Solid Rock</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous">
     <style>
         :root {
@@ -455,7 +452,6 @@ $honeypot_field = 'website_url_' . substr($_SESSION['csrf_token'], 0, 8);
             text-decoration: underline;
         }
 
-<<<<<<< HEAD
         .divider {
             display: flex;
             align-items: center;
@@ -475,7 +471,7 @@ $honeypot_field = 'website_url_' . substr($_SESSION['csrf_token'], 0, 8);
             color: var(--text-light);
             font-size: 0.9rem;
             font-weight: 500;
-=======
+
         .security-features {
             background: #f8fafc;
             border: 1px solid #e2e8f0;
@@ -507,7 +503,7 @@ $honeypot_field = 'website_url_' . substr($_SESSION['csrf_token'], 0, 8);
             color: var(--success-color);
             margin-right: 0.5rem;
             width: 12px;
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
+
         }
 
         @media screen and (max-width: 768px) {
@@ -577,14 +573,14 @@ $honeypot_field = 'website_url_' . substr($_SESSION['csrf_token'], 0, 8);
     </style>
 </head>
 <body>
-    <div class="security-indicator">
-        <i class="fas fa-shield-alt"></i> Secure Connection - Your data is protected with enterprise-grade security
-    </div>
+    <!-- <div class="security-indicator">
+        <i class="fas fa-shield-alt"></i> Secure Connection - Your data is protected
+    </div> -->
 
     <header>
         <div class="logo-container">
-            <img src="images/logo.jpg" alt="Wisetech College Logo">
-            <h1>Wisetech College Portal</h1>
+            <img src="images/logo.jpeg" alt="Solid Rock Logo">
+            <h1>Solid Rock</h1>
         </div>
         
         <?php if ($is_admin): ?>
@@ -618,13 +614,12 @@ $honeypot_field = 'website_url_' . substr($_SESSION['csrf_token'], 0, 8);
             <?php endif; ?>
             
             <div class="form-header">
-<<<<<<< HEAD
+
                 <h2>Create an Account</h2>
                 <p><?php echo $is_admin ? 'Add a single user manually' : 'Join our community to access exclusive resources'; ?></p>
-=======
+
                 <h2>Create Your Account</h2>
                 <p>Join our secure community platform</p>
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
             </div>
             
             <form action="register_user.php" method="POST" id="registrationForm" autocomplete="off">
@@ -691,7 +686,6 @@ $honeypot_field = 'website_url_' . substr($_SESSION['csrf_token'], 0, 8);
                     </select>
                 </div>
 
-<<<<<<< HEAD
                 <?php if ($is_admin): ?>
                 <div class="form-group">
                     <label for="status">Account Status</label>
@@ -718,7 +712,7 @@ $honeypot_field = 'website_url_' . substr($_SESSION['csrf_token'], 0, 8);
                     <?php else: ?>
                         Already have an account? <a href="login.php">Sign in</a>
                     <?php endif; ?>
-=======
+
                 <button type="submit" id="submitBtn" disabled>
                     <i class="fas fa-shield-alt"></i>
                     Create Secure Account
@@ -738,7 +732,7 @@ $honeypot_field = 'website_url_' . substr($_SESSION['csrf_token'], 0, 8);
                         <li><i class="fas fa-check"></i> Password strength validation</li>
                         <li><i class="fas fa-check"></i> Data encryption in transit</li>
                     </ul>
->>>>>>> b291daf7f49078bb0cccb1439969ad4a74e2db38
+
                 </div>
             </form>
         </div>

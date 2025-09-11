@@ -300,9 +300,6 @@ include 'sa_header.php';
 
 <div class="content-header">
     <h1 class="title"><?= htmlspecialchars($pageTitle); ?></h1>
-    <a href="add_staff.php" class="add-staff-btn">
-        <i class="fas fa-plus"></i> Add New Staff
-    </a>
 </div>
 
 <?php if (isset($staff_fetch_error)): ?>

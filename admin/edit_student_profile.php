@@ -2,64 +2,27 @@
 session_start();
 include '../config.php';
 
+// Helper function to safely display values and handle NULL
+function safe_display($value, $default = 'N/A') {
+    if ($value === null || $value === '') {
+        return htmlspecialchars($default);
+    }
+    return htmlspecialchars($value);
+}
+
 // Check if the user is an admin or staff
 if (!isset($_SESSION['user_id']) || ($_SESSION['role'] != 'admin' && $_SESSION['role'] != 'staff')) {
     header("Location: ../login.php");
     exit();
 }
 
-// Check if id is provided in the URL (using integer id from students table)
-if (isset($_GET['id'])) {
-    $student_id = intval($_GET['id']);
-} else {
-    die("Error: Student ID is missing.");
+// Fetch all students with fields that exist in your database
+$studentsQuery = "SELECT student_id, user_id, username, first_name, last_name, course, year, class, date_of_birth, phone, address, email, status FROM students";
+$studentsResult = $conn->query($studentsQuery);
+
+if (!$studentsResult) {
+    die("Error fetching students: " . $conn->error);
 }
-
-// Handle form submission
-$message = "";
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $first_name = trim($_POST['first_name']);
-    $last_name = trim($_POST['last_name']);
-    $year = trim($_POST['year']);
-    $course = trim($_POST['course']);
-    $class = trim($_POST['class']);
-
-    // Update the student's information in the students table
-    $updateQuery = "UPDATE students SET first_name = ?, last_name = ?, year = ?, course = ?, class = ? WHERE id = ?";
-    $stmt = $conn->prepare($updateQuery);
-    
-    if ($stmt === false) {
-        $message = "Error preparing update statement: " . $conn->error;
-    } else {
-        $stmt->bind_param("sssssi", $first_name, $last_name, $year, $course, $class, $student_id);
-
-        if ($stmt->execute()) {
-            $message = "Student information updated successfully!";
-        } else {
-            $message = "Error updating student information: " . $stmt->error;
-        }
-        $stmt->close();
-    }
-}
-
-// Fetch student details from the students table
-$studentQuery = "SELECT id, student_id, username, first_name, last_name, year, course, class FROM students WHERE id = ?";
-$stmt = $conn->prepare($studentQuery);
-if ($stmt === false) {
-    die("Error preparing statement: " . $conn->error);
-}
-$stmt->bind_param("i", $student_id);
-$stmt->execute();
-$studentResult = $stmt->get_result();
-$student = $studentResult->fetch_assoc();
-$stmt->close();
-
-if (!$student) {
-    die("Error: Student not found.");
-}
-
-// Close database connection
-$conn->close();
 ?>
 
 <!DOCTYPE html>
@@ -67,28 +30,25 @@ $conn->close();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Student Information | Admin Portal</title>
+    <title>Update Student Profiles</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --primary: #2563eb;
-            --primary-dark: #1d4ed8;
-            --secondary: #4b5563;
-            --success: #10b981;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --info: #3b82f6;
-            --light: #f3f4f6;
-            --dark: #1f2937;
-            --body-bg: #f9fafb;
-            --card-bg: #ffffff;
-            --text-primary: #111827;
-            --text-secondary: #4b5563;
-            --border-color: #e5e7eb;
-            --radius: 0.5rem;
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --primary: #4361ee;
+            --primary-light: #4895ef;
+            --secondary: #3f37c9;
+            --accent: #4cc9f0;
+            --dark: #2b2d42;
+            --light: #f8f9fa;
+            --gray: #e9ecef;
+            --success: #4ade80;
+            --white: #ffffff;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+            --radius-sm: 0.375rem;
+            --radius-md: 0.75rem;
+            --radius-lg: 1rem;
             --transition: all 0.3s ease;
         }
 
@@ -99,278 +59,288 @@ $conn->close();
         }
 
         body {
-            font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-            background-color: var(--body-bg);
-            color: var(--text-primary);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--gray);
+            color: var(--dark);
             line-height: 1.6;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
         }
 
-        /* Header Styles */
         .header {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
-            padding: 1.25rem;
-            box-shadow: var(--shadow);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: var(--white);
+            padding: 1.5rem 2rem;
             position: sticky;
             top: 0;
-            z-index: 1000;
+            z-index: 100;
+            box-shadow: var(--shadow-md);
         }
 
         .header-content {
-            max-width: 1200px;
+            max-width: 1300px;
             margin: 0 auto;
             display: flex;
-            align-items: center;
             justify-content: space-between;
+            align-items: center;
             flex-wrap: wrap;
             gap: 1rem;
         }
 
-        .header h2 {
+        .header-title {
             font-size: 1.5rem;
             font-weight: 600;
-            margin: 0;
-            display: flex;
-            align-items: center;
-        }
-
-        .header h2 i {
-            margin-right: 0.75rem;
-        }
-
-        .header-actions {
-            display: flex;
-            gap: 0.75rem;
-        }
-
-        /* Main Content */
-        .main {
-            flex: 1;
-            max-width: 800px;
-            width: 100%;
-            margin: 2rem auto;
-            padding: 0 1.5rem;
-        }
-
-        /* Breadcrumb */
-        .breadcrumb {
-            margin-bottom: 1.5rem;
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            font-size: 0.875rem;
-            color: var(--text-secondary);
         }
 
-        .breadcrumb a {
-            color: var(--primary);
+        .header-title i {
+            font-size: 1.75rem;
+        }
+
+        .header-nav {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .nav-btn {
+            background-color: rgba(255, 255, 255, 0.15);
+            color: var(--white);
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: var(--radius-sm);
             text-decoration: none;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
             transition: var(--transition);
+            backdrop-filter: blur(5px);
         }
 
-        .breadcrumb a:hover {
-            color: var(--primary-dark);
+        .nav-btn:hover {
+            background-color: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
         }
 
-        .breadcrumb-separator {
-            color: var(--text-secondary);
+        .container {
+            max-width: 1300px;
+            width: 100%;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+            flex: 1;
         }
 
-        /* Card Styles */
+        .page-title {
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .page-title i {
+            color: var(--primary);
+        }
+
         .card {
-            background-color: var(--card-bg);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
+            background: var(--white);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
             overflow: hidden;
             transition: var(--transition);
         }
 
         .card:hover {
-            box-shadow: var(--shadow-lg);
-            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
         }
 
         .card-header {
             padding: 1.5rem 2rem;
-            border-bottom: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--gray);
             display: flex;
-            align-items: center;
             justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
         }
 
         .card-title {
             font-size: 1.25rem;
             font-weight: 600;
-            color: var(--primary);
+            color: var(--dark);
             margin: 0;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
         }
 
         .card-body {
-            padding: 2rem;
+            padding: 0;
         }
 
-        /* Student Info Display */
-        .student-info {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
-            padding: 1.5rem;
-            border-radius: var(--radius);
-            margin-bottom: 2rem;
-            text-align: center;
+        .search-box {
+            position: relative;
+            max-width: 300px;
+            width: 100%;
         }
 
-        .student-info h3 {
-            font-size: 1.5rem;
-            margin-bottom: 0.5rem;
+        .search-input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border: 1px solid var(--gray);
+            border-radius: var(--radius-sm);
+            font-size: 0.9rem;
+            transition: var(--transition);
         }
 
-        .student-info p {
-            font-size: 1rem;
-            opacity: 0.9;
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary-light);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
         }
 
-        /* Form Styles */
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
+        .search-icon {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #adb5bd;
         }
 
-        .form-group {
-            margin-bottom: 1.5rem;
+        .table-container {
+            overflow-x: auto;
+            border-radius: var(--radius-md);
         }
 
-        .form-label {
-            display: block;
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        th, td {
+            padding: 1rem 1.5rem;
+            text-align: left;
+            border-bottom: 1px solid var(--gray);
+        }
+
+        th {
+            background-color: var(--light);
+            color: var(--dark);
+            font-weight: 600;
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+        }
+
+        tbody tr {
+            transition: var(--transition);
+        }
+
+        tbody tr:hover {
+            background-color: rgba(67, 97, 238, 0.05);
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .student-id {
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.8rem;
             font-weight: 500;
-            margin-bottom: 0.5rem;
-            color: var(--text-primary);
         }
 
-        .form-control {
-            width: 100%;
-            padding: 0.75rem 1rem;
-            font-size: 1rem;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius);
-            background-color: white;
-            transition: var(--transition);
+        .status-active {
+            background-color: rgba(74, 222, 128, 0.15);
+            color: #15803d;
         }
 
-        .form-control:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+        .status-inactive {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #dc2626;
         }
 
-        .form-select {
-            width: 100%;
-            padding: 0.75rem 1rem;
-            font-size: 1rem;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius);
-            background-color: white;
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-            background-position: right 0.75rem center;
-            background-repeat: no-repeat;
-            background-size: 1rem;
-            appearance: none;
-            transition: var(--transition);
+        .status-graduated {
+            background-color: rgba(59, 130, 246, 0.15);
+            color: #2563eb;
         }
 
-        .form-select:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+        .status-transfer {
+            background-color: rgba(245, 158, 11, 0.15);
+            color: #d97706;
         }
 
-        /* Button Styles */
         .btn {
             display: inline-flex;
             align-items: center;
-            justify-content: center;
-            padding: 0.75rem 1.5rem;
-            font-size: 1rem;
-            font-weight: 500;
-            border: none;
-            border-radius: var(--radius);
-            cursor: pointer;
-            transition: var(--transition);
-            text-decoration: none;
             gap: 0.5rem;
+            padding: 0.6rem 1rem;
+            border-radius: var(--radius-sm);
+            font-weight: 500;
+            text-decoration: none;
+            transition: var(--transition);
+            border: none;
+            cursor: pointer;
         }
 
         .btn-primary {
             background-color: var(--primary);
-            color: white;
+            color: var(--white);
         }
 
         .btn-primary:hover {
-            background-color: var(--primary-dark);
-        }
-
-        .btn-secondary {
             background-color: var(--secondary);
-            color: white;
+            transform: translateY(-2px);
         }
 
-        .btn-secondary:hover {
-            background-color: #374151;
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
         }
 
-        .btn-lg {
-            padding: 0.875rem 1.75rem;
+        .btn-outline:hover {
+            background-color: var(--primary);
+            color: var(--white);
         }
 
-        .btn-block {
-            width: 100%;
-        }
-
-        /* Alert Messages */
-        .alert {
-            padding: 1rem 1.5rem;
-            margin-bottom: 1.5rem;
-            border-radius: var(--radius);
-            display: flex;
+        .btn-icon {
+            width: 2.25rem;
+            height: 2.25rem;
+            display: inline-flex;
             align-items: center;
-            border-left: 4px solid transparent;
+            justify-content: center;
+            border-radius: 50%;
+            padding: 0;
         }
 
-        .alert-icon {
-            margin-right: 1rem;
-            font-size: 1.25rem;
+        .actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
         }
 
-        .alert-success {
-            background-color: rgba(16, 185, 129, 0.1);
-            border-left-color: var(--success);
-            color: #065f46;
-        }
-
-        .alert-danger {
-            background-color: rgba(239, 68, 68, 0.1);
-            border-left-color: var(--danger);
-            color: #b91c1c;
-        }
-
-        /* Footer Styles */
         .footer {
-            background-color: var(--dark);
-            color: white;
+            background-color: var(--white);
             padding: 1.5rem;
             text-align: center;
             margin-top: auto;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
         }
 
         .footer-content {
-            max-width: 1200px;
+            max-width: 1300px;
             margin: 0 auto;
             display: flex;
             justify-content: space-between;
@@ -379,189 +349,340 @@ $conn->close();
             gap: 1rem;
         }
 
-        .footer-text {
-            font-size: 0.95rem;
+        .footer-logo {
+            font-weight: 600;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        .footer-links {
+        .footer-nav {
             display: flex;
             gap: 1.5rem;
         }
 
         .footer-link {
-            color: #d1d5db;
+            color: var(--dark);
             text-decoration: none;
             transition: var(--transition);
         }
 
         .footer-link:hover {
-            color: white;
+            color: var(--primary);
         }
 
-        /* Responsive Styles */
-        @media (max-width: 768px) {
-            .header-content, .footer-content {
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 0.25rem;
+            margin: 1.5rem 0;
+        }
+
+        .page-item {
+            list-style: none;
+        }
+
+        .page-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.25rem;
+            height: 2.25rem;
+            border-radius: var(--radius-sm);
+            text-decoration: none;
+            color: var(--dark);
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .page-link:hover {
+            background-color: var(--gray);
+        }
+
+        .page-link.active {
+            background-color: var(--primary);
+            color: var(--white);
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+            text-align: center;
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            color: #d1d5db;
+            margin-bottom: 1rem;
+        }
+
+        .empty-state-text {
+            color: #6b7280;
+            margin-bottom: 1.5rem;
+        }
+
+        @media screen and (max-width: 992px) {
+            .header-content {
                 flex-direction: column;
-                text-align: center;
+                align-items: flex-start;
             }
-
-            .card-body {
-                padding: 1.5rem;
+            
+            .card-header {
+                flex-direction: column;
+                align-items: flex-start;
             }
-
-            .form-grid {
-                grid-template-columns: 1fr;
+            
+            .search-box {
+                max-width: 100%;
             }
         }
 
-        @media (max-width: 576px) {
-            .main {
+        @media screen and (max-width: 768px) {
+            .container {
                 padding: 0 1rem;
                 margin: 1rem auto;
             }
-
-            .card-header {
-                padding: 1.25rem 1.5rem;
+            
+            th, td {
+                padding: 0.75rem 1rem;
             }
-
-            .card-body {
-                padding: 1.25rem;
+            
+            .footer-content {
+                flex-direction: column;
             }
-
-            .btn {
-                padding: 0.625rem 1.25rem;
+            
+            .footer-nav {
+                margin-top: 1rem;
+                justify-content: center;
             }
         }
 
-        /* Animation */
-        @keyframes fadeIn {
-            0% { opacity: 0; transform: translateY(10px); }
-            100% { opacity: 1; transform: translateY(0); }
-        }
-
-        .card {
-            animation: fadeIn 0.5s ease-out;
+        @media screen and (max-width: 640px) {
+            .table-container {
+                margin: 0 -1rem;
+                width: calc(100% + 2rem);
+                border-radius: 0;
+            }
+            
+            .card {
+                border-radius: 0;
+                box-shadow: none;
+            }
+            
+            .hide-sm {
+                display: none;
+            }
+            
+            th, td {
+                padding: 0.75rem 0.75rem;
+            }
+            
+            .actions {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
 <body>
     <header class="header">
         <div class="header-content">
-            <h2><i class="fas fa-user-edit"></i> Edit Student Information</h2>
-            <div class="header-actions">
-                <a href="update_student_profile.php" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Back to Students
+            <div class="header-title">
+                <i class="fas fa-graduation-cap"></i>
+                <span>WiseTech College</span>
+            </div>
+            <div class="header-nav">
+                <a href="manage_students.php" class="nav-btn">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-btn">
+                    <i class="fas fa-bell"></i>
+                    <span>Notifications</span>
                 </a>
             </div>
         </div>
     </header>
 
-    <main class="main">
-        <div class="breadcrumb">
-            <a href="dashboard.php">Dashboard</a>
-            <span class="breadcrumb-separator">›</span>
-            <a href="update_student_profile.php">Students</a>
-            <span class="breadcrumb-separator">›</span>
-            <span>Edit Student</span>
-        </div>
-
+    <div class="container">
+        <h1 class="page-title">
+            <i class="fas fa-users"></i>
+            Student Profiles
+        </h1>
+        
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title">
-                    <i class="fas fa-user"></i> Student Information
-                </h3>
-            </div>
-            <div class="card-body">
-                <!-- Student Info Display -->
-                <div class="student-info">
-                    <h3><?= htmlspecialchars($student['first_name'] ?? $student['username']) ?> <?= htmlspecialchars($student['last_name'] ?? '') ?></h3>
-                    <p>Student ID: <?= htmlspecialchars($student['student_id']) ?></p>
+                <h2 class="card-title">Manage Students</h2>
+                <div class="search-box">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" class="search-input" placeholder="Search students...">
                 </div>
-
-                <?php if ($message): ?>
-                    <div class="alert <?= strpos($message, 'Error') !== false ? 'alert-danger' : 'alert-success' ?>">
-                        <i class="alert-icon <?= strpos($message, 'Error') !== false ? 'fas fa-exclamation-circle' : 'fas fa-check-circle' ?>"></i>
-                        <?= $message ?>
-                    </div>
-                <?php endif; ?>
-
-                <form action="edit_student_profile.php?id=<?= $student_id ?>" method="POST">
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label" for="first_name">First Name</label>
-                            <input type="text" id="first_name" name="first_name" class="form-control" 
-                                   value="<?= htmlspecialchars($student['first_name'] ?? '') ?>" 
-                                   placeholder="Enter first name" required>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label" for="last_name">Last Name</label>
-                            <input type="text" id="last_name" name="last_name" class="form-control" 
-                                   value="<?= htmlspecialchars($student['last_name'] ?? '') ?>" 
-                                   placeholder="Enter last name" required>
-                        </div>
-                    </div>
-
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label" for="year">Year Enrolled</label>
-                            <select id="year" name="year" class="form-select" required>
-                                <option value="">-- Select Year --</option>
-                                <?php 
-                                $currentYear = date('Y');
-                                for ($i = $currentYear - 5; $i <= $currentYear + 1; $i++): 
-                                ?>
-                                    <option value="<?= $i ?>" <?= ($student['year'] == $i) ? 'selected' : '' ?>>
-                                        <?= $i ?>
-                                    </option>
-                                <?php endfor; ?>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label" for="course">Combination (Course)</label>
-                            <select id="course" name="course" class="form-select" required>
-                                <option value="">-- Select Combination --</option>
-                                <option value="Science" <?= ($student['course'] == 'Science') ? 'selected' : '' ?>>Science</option>
-                                <option value="Arts" <?= ($student['course'] == 'Arts') ? 'selected' : '' ?>>Arts</option>
-                                <option value="Commercial" <?= ($student['course'] == 'Commercial') ? 'selected' : '' ?>>Commercial</option>
-                                <option value="Technical" <?= ($student['course'] == 'Technical') ? 'selected' : '' ?>>Technical</option>
-                                <option value="Mathematics" <?= ($student['course'] == 'Mathematics') ? 'selected' : '' ?>>Mathematics</option>
-                                <option value="Geography" <?= ($student['course'] == 'Geography') ? 'selected' : '' ?>>Geography</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label" for="class">Class</label>
-                        <select id="class" name="class" class="form-select" required>
-                            <option value="">-- Select Class --</option>
-                            <option value="Form 1" <?= ($student['class'] == 'Form 1') ? 'selected' : '' ?>>Form 1</option>
-                            <option value="Form 2" <?= ($student['class'] == 'Form 2') ? 'selected' : '' ?>>Form 2</option>
-                            <option value="Form 3" <?= ($student['class'] == 'Form 3') ? 'selected' : '' ?>>Form 3</option>
-                            <option value="Form 4" <?= ($student['class'] == 'Form 4') ? 'selected' : '' ?>>Form 4</option>
-                            <option value="Form 5" <?= ($student['class'] == 'Form 5') ? 'selected' : '' ?>>Form 5</option>
-                            <option value="Form 6" <?= ($student['class'] == 'Form 6') ? 'selected' : '' ?>>Form 6</option>
-                        </select>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary btn-block btn-lg">
-                        <i class="fas fa-save"></i> Update Student Information
-                    </button>
-                </form>
+            </div>
+            
+            <div class="card-body">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Student ID</th>
+                                <th>First Name</th>
+                                <th>Last Name</th>
+                                <th>Username</th>
+                                <th class="hide-sm">Course</th>
+                                <th class="hide-sm">Year</th>
+                                <th>Class</th>
+                                <th class="hide-sm">Date of Birth</th>
+                                <th class="hide-sm">Email</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if ($studentsResult->num_rows > 0): ?>
+                                <?php while ($student = $studentsResult->fetch_assoc()): ?>
+                                    <tr>
+                                        <td class="student-id"><?= safe_display($student['student_id']) ?></td>
+                                        <td><?= safe_display($student['first_name']) ?></td>
+                                        <td><?= safe_display($student['last_name']) ?></td>
+                                        <td><?= safe_display($student['username'], 'No Username') ?></td>
+                                        <td class="hide-sm"><?= safe_display($student['course'], 'Not Assigned') ?></td>
+                                        <td class="hide-sm"><?= safe_display($student['year'], 'Not Set') ?></td>
+                                        <td><?= safe_display($student['class'], 'Not Assigned') ?></td>
+                                        <td class="hide-sm"><?= safe_display($student['date_of_birth'], 'Not Set') ?></td>
+                                        <td class="hide-sm"><?= safe_display($student['email'], 'No Email') ?></td>
+                                        <td>
+                                            <?php 
+                                            $status = strtolower($student['status']);
+                                            $status_class = 'status-active';
+                                            $status_icon = 'fas fa-circle';
+                                            
+                                            switch($status) {
+                                                case 'inactive':
+                                                    $status_class = 'status-inactive';
+                                                    $status_icon = 'fas fa-circle';
+                                                    break;
+                                                case 'graduated':
+                                                    $status_class = 'status-graduated';
+                                                    $status_icon = 'fas fa-graduation-cap';
+                                                    break;
+                                                case 'transfer':
+                                                    $status_class = 'status-transfer';
+                                                    $status_icon = 'fas fa-exchange-alt';
+                                                    break;
+                                                default:
+                                                    $status_class = 'status-active';
+                                                    $status_icon = 'fas fa-circle';
+                                            }
+                                            ?>
+                                            <span class="status-badge <?= $status_class ?>">
+                                                <i class="<?= $status_icon ?>"></i>
+                                                <?= ucfirst(safe_display($student['status'], 'Active')) ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="actions">
+                                                <a href="edit_student_profile.php?student_id=<?= $student['student_id'] ?>" class="btn btn-primary">
+                                                    <i class="fas fa-pen"></i>
+                                                    Edit
+                                                </a>
+                                                <a href="view_student.php?student_id=<?= $student['student_id'] ?>" class="btn btn-outline btn-icon">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endwhile; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="11">
+                                        <div class="empty-state">
+                                            <i class="fas fa-user-slash"></i>
+                                            <p class="empty-state-text">No students found in the database.</p>
+                                            <a href="add_student.php" class="btn btn-primary">
+                                                <i class="fas fa-plus"></i>
+                                                Add Student
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
-    </main>
+        
+        <?php if ($studentsResult->num_rows > 0): ?>
+        <ul class="pagination">
+            <li class="page-item">
+                <a href="#" class="page-link">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+            </li>
+            <li class="page-item"><a href="#" class="page-link active">1</a></li>
+            <li class="page-item"><a href="#" class="page-link">2</a></li>
+            <li class="page-item"><a href="#" class="page-link">3</a></li>
+            <li class="page-item">
+                <a href="#" class="page-link">
+                <i class="fas fa-chevron-right"></i>
+                </a>
+            </li>
+        </ul>
+        <?php endif; ?>
+    </div>
 
     <footer class="footer">
         <div class="footer-content">
-            <p class="footer-text">&copy; <?php echo date("Y"); ?> Wisetech College Portal | All Rights Reserved</p>
-            <div class="footer-links">
-                <a href="#" class="footer-link">Privacy Policy</a>
-                <a href="#" class="footer-link">Terms of Service</a>
-                <a href="#" class="footer-link">Help Center</a>
+            <div class="footer-logo">
+                <i class="fas fa-graduation-cap"></i>
+                <span>WiseTech College Portal</span>
             </div>
+            <div class="footer-nav">
+                <a href="#" class="footer-link">About</a>
+                <a href="#" class="footer-link">Privacy Policy</a>
+                <a href="#" class="footer-link">Help Center</a>
+                <a href="#" class="footer-link">Contact</a>
+            </div>
+            <p>&copy; <?php echo date("Y"); ?> WiseTech College. All rights reserved.</p>
         </div>
     </footer>
+
+    <script>
+        // Simple search functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.querySelector('.search-input');
+            const tableRows = document.querySelectorAll('tbody tr');
+            
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                tableRows.forEach(row => {
+                    if (row.querySelector('.empty-state')) return; // Skip empty state row
+                    
+                    const studentId = row.cells[0].textContent.toLowerCase();
+                    const firstName = row.cells[1].textContent.toLowerCase();
+                    const lastName = row.cells[2].textContent.toLowerCase();
+                    const username = row.cells[3].textContent.toLowerCase();
+                    const course = row.cells[4] ? row.cells[4].textContent.toLowerCase() : '';
+                    const email = row.cells[8] ? row.cells[8].textContent.toLowerCase() : '';
+                    
+                    const matches = studentId.includes(searchTerm) || 
+                                  firstName.includes(searchTerm) || 
+                                  lastName.includes(searchTerm) || 
+                                  username.includes(searchTerm) ||
+                                  course.includes(searchTerm) ||
+                                  email.includes(searchTerm);
+                    
+                    row.style.display = matches ? '' : 'none';
+                });
+            });
+        });
+    </script>
 </body>
 </html>
+<?php
+$conn->close();
+?>

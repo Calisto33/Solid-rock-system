@@ -44,7 +44,7 @@ $results = $stmt->get_result();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/jpeg" href="../images/logo.jpeg">
     <link rel="shortcut icon" type="image/jpeg" href="../images/logo.jpeg">
-    <title>Student Results | Solid Rock</title>
+    <title>Student Results | Solid Rock </title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -467,7 +467,7 @@ $results = $stmt->get_result();
 
     <footer class="footer">
         <div class="footer-content">
-            <img src="../images/logo.jpg" alt="Solid Rock Logo" class="footer-logo">
+            <img src="../images/logo.jpg" alt="Solid Rock  Logo" class="footer-logo">
             <p class="footer-text">&copy; <?php echo date("Y"); ?> Mirilax-Scales Portal. All rights reserved.</p>
         </div>
     </footer>

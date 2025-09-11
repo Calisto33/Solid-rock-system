@@ -72,9 +72,6 @@ include 'sa_header.php';
                                     <a href="edit_parent.php?parent_id=<?= $parent['parent_id'] ?>" class="btn-icon btn-edit" title="Edit">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    <a href="view_parent.php?parent_id=<?= $parent['parent_id'] ?>" class="btn-icon" title="View Details">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
                                 </div>
                             </td>
                         </tr>

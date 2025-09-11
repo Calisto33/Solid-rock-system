@@ -11,7 +11,9 @@ include '../config.php';
 include './notifications.php';
 
 // PHPMailer Autoload
-require_once __DIR__ . '/../vendor/autoload.php';
+// This line assumes the vendor folder exists one level up from the current file.
+// If not, please adjust the path.
+// require_once __DIR__ . '/../vendor/autoload.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
@@ -25,7 +27,7 @@ function safeHtmlspecialchars($value, $default = '') {
     return htmlspecialchars((string)$value);
 }
 
-// Include all your existing functions from update_fees.php
+// All your existing functions from update_fees.php
 function ensureIndividualFeeRecord($student_id, $conn) {
     // Check if student has their own fee record
     $checkQuery = "SELECT fee_id FROM fees WHERE student_id = ?";
@@ -42,7 +44,7 @@ function ensureIndividualFeeRecord($student_id, $conn) {
     if ($result->num_rows == 0) {
         // Create individual fee record for this student
         $insertQuery = "INSERT INTO fees (student_id, total_fee, amount_paid, due_date, payment_plan, status) 
-                       VALUES (?, 1000.00, 0.00, DATE_ADD(CURDATE(), INTERVAL 1 MONTH), 'One-Time', 'Pending')";
+                        VALUES (?, 1000.00, 0.00, DATE_ADD(CURDATE(), INTERVAL 1 MONTH), 'One-Time', 'Pending')";
         $insertStmt = $conn->prepare($insertQuery);
         if ($insertStmt === false) {
             error_log("Failed to prepare insert query: " . $conn->error);
@@ -110,7 +112,7 @@ function sendPaymentConfirmationEmail(
 ): bool {
 
     $balanceDue = $totalFee - $amountPaidSoFar;
-    $emailSubject = "Payment Confirmation for {$studentName} - Solid Rock ";
+    $emailSubject = "Payment Confirmation for {$studentName} - Solid Rock  ";
 
     $keyPoints = [
         "Acknowledge the recent payment of $" . number_format($paymentAmount, 2) . " for {$studentName} via {$paymentMethod}.",
@@ -124,7 +126,7 @@ function sendPaymentConfirmationEmail(
 
     $promptParentNameForLLM = $parentName;
 
-    $prompt = "You are an AI assistant for Solid Rock Group of schools. Your task is to draft ONLY the BODY of a professional and friendly payment confirmation email.\n\n";
+    $prompt = "You are an AI assistant for Solid Rock Group Of Schools . Your task is to draft ONLY the BODY of a professional and friendly payment confirmation email.\n\n";
     $prompt .= "The email is addressed to {$promptParentNameForLLM}.\n";
     $prompt .= "The subject line for this email will be: \"{$emailSubject}\". Do NOT include the subject line itself in the email body you generate.\n\n";
 
@@ -134,7 +136,7 @@ function sendPaymentConfirmationEmail(
     }
     $prompt .= "\nMaintain a courteous and professional tone.\n";
     $prompt .= "Start the email body *directly* with the greeting (e.g., 'Dear {$promptParentNameForLLM},').\n";
-    $prompt .= "End the email body with a professional closing from 'Solid Rock Group of schools Accounts Department'.\n";
+    $prompt .= "End the email body with a professional closing from 'Solid Rock  Accounts Department'.\n";
     $prompt .= "Do NOT include any introductory phrases like 'Here is the draft,' 'Okay, here is the email body,' or any similar conversational text before the actual email content.\n";
     $prompt .= "Generate only the email body content.\n";
 
@@ -307,8 +309,8 @@ if (isset($_POST['ajax_action'])) {
 
         if ($fee_exists) {
             $updateQuery = "UPDATE fees 
-                           SET total_fee = ?, amount_paid = ?, due_date = ?, payment_plan = ?, status = ? 
-                           WHERE student_id = ? AND fee_id = ?";
+                            SET total_fee = ?, amount_paid = ?, due_date = ?, payment_plan = ?, status = ? 
+                            WHERE student_id = ? AND fee_id = ?";
             $stmt_update_details = $conn->prepare($updateQuery);
             $stmt_update_details->bind_param("ddssssi", $total_fee_post, $amount_paid_post, $due_date_post, $payment_plan_post, $new_status_general_update, $student_id, $fee_id_to_update);
         } else {
@@ -349,9 +351,9 @@ if (isset($_POST['ajax_action'])) {
         
         // Get current fee data
         $current_fee_query = "SELECT fee_id, total_fee, amount_paid, status 
-                             FROM fees 
-                             WHERE student_id = ? 
-                             LIMIT 1";
+                              FROM fees 
+                              WHERE student_id = ? 
+                              LIMIT 1";
         $stmt_current = $conn->prepare($current_fee_query);
         $stmt_current->bind_param("s", $student_id);
         $stmt_current->execute();
@@ -404,18 +406,25 @@ if (isset($_POST['ajax_action'])) {
 
         if ($stmt_payment->execute()) {
             $updateFeeAmountQuery = "UPDATE fees 
-                                   SET amount_paid = ?, status = ? 
-                                   WHERE student_id = ? AND fee_id = ?";
+                                     SET amount_paid = ?, status = ? 
+                                     WHERE student_id = ? AND fee_id = ?";
             $stmt_fee_amount = $conn->prepare($updateFeeAmountQuery);
             $stmt_fee_amount->bind_param("dssi", $updated_amount_paid, $new_status_after_payment, $student_id, $fee_id_for_payment);
 
             if ($stmt_fee_amount->execute()) {
-                // Send email (your existing logic)
-                $parentInfoQuery = "SELECT u.email AS parent_email, u.username AS parent_name, s.username AS student_name
-                                    FROM students s
-                                    LEFT JOIN parents p ON s.student_id = p.student_id
-                                    LEFT JOIN users u ON p.user_id = u.id
-                                    WHERE s.student_id = ?";
+                // UPDATED EMAIL QUERY - Use student_parent_relationships table with proper user details
+                $parentInfoQuery = "SELECT u.email AS parent_email, 
+                                           CASE 
+                                               WHEN u.first_name IS NOT NULL AND u.first_name != '' AND u.last_name IS NOT NULL AND u.last_name != ''
+                                               THEN CONCAT(u.first_name, ' ', u.last_name)
+                                               ELSE u.username
+                                           END AS parent_name,
+                                           CONCAT(COALESCE(s.first_name, ''), ' ', COALESCE(s.last_name, '')) AS student_name
+                                     FROM students s
+                                     LEFT JOIN student_parent_relationships spr ON s.student_id = spr.student_id
+                                     LEFT JOIN users u ON spr.parent_id = u.id
+                                     WHERE s.student_id = ? AND spr.is_primary_contact = 1
+                                     LIMIT 1";
                 $stmt_parent_info = $conn->prepare($parentInfoQuery);
                 if ($stmt_parent_info) {
                     $stmt_parent_info->bind_param("s", $student_id);
@@ -438,7 +447,7 @@ if (isset($_POST['ajax_action'])) {
                     }
                     $stmt_parent_info->close();
                 }
-
+                
                 if (function_exists('trigger_payment_received_notification')) {
                     trigger_payment_received_notification($student_id, $payment_amount, $conn);
                 }
@@ -466,11 +475,6 @@ if (isset($_POST['ajax_action'])) {
 }
 
 // --- YOUR ORIGINAL FEES.PHP LOGIC CONTINUES HERE ---
-
-// --- REMOVED THE PROBLEMATIC GLOBAL STATUS UPDATE ---
-// The following global update was causing all student fees to update when one student was modified:
-// This has been removed to fix the issue where updating one student affected all students
-
 // --- Message Handling ---
 $fees_overview_message = '';
 $fees_overview_message_type = 'info';
@@ -545,16 +549,23 @@ $total_pages = ($total_items > 0) ? ceil($total_items / $items_per_page) : 1;
 $current_page = min($current_page, $total_pages);
 $offset = ($current_page - 1) * $items_per_page;
 
-// FIXED QUERY - Use first_name and last_name instead of username
+// UPDATED MAIN QUERY - Use student_parent_relationships table with proper user details
 $query_fees_overview = "
     SELECT
         s.student_id, 
         CONCAT(COALESCE(s.first_name, ''), ' ', COALESCE(s.last_name, '')) AS student_name,
         s.class,
-        (SELECT GROUP_CONCAT(CONCAT(u.username, ' (', p.relationship, ')') ORDER BY p.parent_id SEPARATOR ', ') 
-         FROM parents p 
-         INNER JOIN users u ON p.user_id = u.id 
-         WHERE p.student_id = s.student_id) AS parent_name,
+        (SELECT GROUP_CONCAT(CONCAT(
+            CASE 
+                WHEN u.first_name IS NOT NULL AND u.first_name != '' AND u.last_name IS NOT NULL AND u.last_name != ''
+                THEN CONCAT(u.first_name, ' ', u.last_name)
+                ELSE u.username
+            END, 
+            ' (', spr.relationship_type, ')'
+        ) ORDER BY spr.id SEPARATOR ', ') 
+         FROM student_parent_relationships spr 
+         INNER JOIN users u ON spr.parent_id = u.id 
+         WHERE spr.student_id = s.student_id) AS parent_name,
         COALESCE(f.total_fee, 0.00) AS total_fee,
         COALESCE(f.amount_paid, 0.00) AS amount_paid,
         (COALESCE(f.total_fee, 0) - COALESCE(f.amount_paid, 0)) as amount_due,
@@ -591,500 +602,512 @@ $statuses = ['Cleared', 'Overdue', 'Pending', 'No Fee Assigned'];
 // Include header AFTER all logic, before any HTML output.
 include 'sa_header.php';
 ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?= safeHtmlspecialchars($pageTitle); ?></title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        /* =================================================================== */
+        /* === A) GLOBAL & LAYOUT STYLING ==================================== */
+        /* =================================================================== */
+        body {
+            background-color: #f4f7fa;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        .card {
+            border-radius: 12px;
+            background: #ffffff;
+            box-shadow: 0 10px 30px rgba(0, 70, 150, 0.08);
+            border: none;
+            overflow: hidden;
+        }
+        .content-header .title {
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
 
-<style>
-/* =================================================================== */
-/* === A) GLOBAL & LAYOUT STYLING ==================================== */
-/* =================================================================== */
-body {
-    background-color: #f4f7fa;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-}
-.card {
-    border-radius: 12px;
-    background: #ffffff;
-    box-shadow: 0 10px 30px rgba(0, 70, 150, 0.08);
-    border: none;
-    overflow: hidden;
-}
-.content-header .title {
-    font-weight: 700;
-    color: #2c3e50;
-}
+        /* =================================================================== */
+        /* === B) TABLE STYLING ============================================== */
+        /* =================================================================== */
+        .fees-table-container {
+            width: 100%;
+            overflow-x: auto;
+        }
+        .fees-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .fees-table th, .fees-table td {
+            padding: 16px 20px;
+            text-align: left;
+            border-bottom: 1px solid #eef2f7;
+            vertical-align: middle;
+        }
+        .fees-table thead th {
+            background-color: #34495e;
+            color: #ffffff;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+        }
+        .fees-table thead th a {
+            color: #ffffff;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+        .fees-table thead th a:hover {
+            color: #4fc3f7;
+        }
+        .fees-table tbody tr {
+            transition: background-color 0.25s ease;
+        }
+        .fees-table tbody tr:last-of-type td {
+            border-bottom: none;
+        }
+        .fees-table tbody tr:hover {
+            background-color: #f8faff;
+        }
+        .amount-due {
+            color: #e74c3c;
+            font-weight: 600;
+            font-size: 1.05em;
+        }
+        .date-overdue {
+            color: #c0392b;
+            font-weight: 600;
+        }
 
-/* =================================================================== */
-/* === B) TABLE STYLING ============================================== */
-/* =================================================================== */
-.fees-table-container {
-    width: 100%;
-    overflow-x: auto;
-}
-.fees-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-.fees-table th, .fees-table td {
-    padding: 16px 20px;
-    text-align: left;
-    border-bottom: 1px solid #eef2f7;
-    vertical-align: middle;
-}
-.fees-table thead th {
-    background-color: #34495e;
-    color: #ffffff;
-    font-weight: 600;
-    text-transform: uppercase;
-    font-size: 12px;
-    letter-spacing: 0.5px;
-}
-.fees-table thead th a {
-    color: #ffffff;
-    text-decoration: none;
-    transition: color 0.2s ease;
-}
-.fees-table thead th a:hover {
-    color: #4fc3f7;
-}
-.fees-table tbody tr {
-    transition: background-color 0.25s ease;
-}
-.fees-table tbody tr:last-of-type td {
-    border-bottom: none;
-}
-.fees-table tbody tr:hover {
-    background-color: #f8faff;
-}
-.amount-due {
-    color: #e74c3c;
-    font-weight: 600;
-    font-size: 1.05em;
-}
-.date-overdue {
-    color: #c0392b;
-    font-weight: 600;
-}
+        /* =================================================================== */
+        /* === C) EYE-CATCHING STATUS PILLS ================================== */
+        /* =================================================================== */
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #fff;
+            text-transform: capitalize;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .status-pill:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+        }
+        .status-pill .fa, .status-pill .fas {
+            font-size: 13px;
+        }
+        .status-cleared { background-image: linear-gradient(45deg, #2ed573, #219d55); }
+        .status-overdue { background-image: linear-gradient(45deg, #ff4757, #c0392b); }
+        .status-pending { background-image: linear-gradient(45deg, #ffc107, #ff8c00); }
+        .status-no-fee-assigned { background-image: linear-gradient(45deg, #747d8c, #57606f); }
+        .status-partial { background-image: linear-gradient(45deg, #3498db, #2980b9); }
 
-/* =================================================================== */
-/* === C) EYE-CATCHING STATUS PILLS ================================== */
-/* =================================================================== */
-.status-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 14px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-    color: #fff;
-    text-transform: capitalize;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.status-pill:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
-}
-.status-pill .fa, .status-pill .fas {
-    font-size: 13px;
-}
-.status-cleared { background-image: linear-gradient(45deg, #2ed573, #219d55); }
-.status-overdue { background-image: linear-gradient(45deg, #ff4757, #c0392b); }
-.status-pending { background-image: linear-gradient(45deg, #ffc107, #ff8c00); }
-.status-no-fee-assigned { background-image: linear-gradient(45deg, #747d8c, #57606f); }
+        /* =================================================================== */
+        /* === D) CONTROLS & PAGINATION ====================================== */
+        /* =================================================================== */
+        .table-controls, .bulk-actions-container {
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #eef2f7;
+        }
+        .bulk-actions-container {
+            border-top: 1px solid #eef2f7;
+            padding-top: 20px;
+        }
+        .filter-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            align-items: center;
+        }
+        .filter-form select, .bulk-actions-container select {
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #dcdfe6;
+            background-color: #fff;
+            font-size: 14px;
+        }
+        .filter-form select:focus, .bulk-actions-container select:focus {
+            outline: none;
+            border-color: #409eff;
+            box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+        }
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-primary { 
+            background-color: #409eff; 
+            color: white; 
+            box-shadow: 0 4px 10px rgba(64, 158, 255, 0.2);
+        }
+        .btn-primary:hover {
+            background-color: #3a8ee6;
+            box-shadow: 0 6px 15px rgba(64, 158, 255, 0.3);
+        }
+        .btn-secondary {
+            background-color: #f0f2f5;
+            color: #57606f;
+            border: 1px solid #dcdfe6;
+        }
+        .btn-secondary:hover {
+            background-color: #e4e7ed;
+            border-color: #c8cdd8;
+        }
+        .btn-warning {
+            background-color: #f59e0b;
+            color: white;
+            box-shadow: 0 4px 10px rgba(245, 158, 11, 0.2);
+        }
+        .btn-warning:hover {
+            background-color: #d97706;
+            box-shadow: 0 6px 15px rgba(245, 158, 11, 0.3);
+        }
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .pagination {
+            padding: 20px;
+            text-align: right;
+        }
+        .pagination a, .pagination span {
+            margin: 0 5px;
+            padding: 8px 15px;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+        .pagination a {
+            color: #57606f;
+            background-color: #fff;
+            border: 1px solid #dcdfe6;
+        }
+        .pagination a:hover {
+            background-color: #409eff;
+            color: #fff;
+            border-color: #409eff;
+        }
+        .pagination span.disabled {
+            color: #c0c4cc;
+        }
+        .pagination span.current-page {
+            background-image: linear-gradient(45deg, #409eff, #3a8ee6);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 10px rgba(64, 158, 255, 0.3);
+        }
 
-/* =================================================================== */
-/* === D) CONTROLS & PAGINATION ====================================== */
-/* =================================================================== */
-.table-controls, .bulk-actions-container {
-    padding: 20px;
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #eef2f7;
-}
-.bulk-actions-container {
-    border-top: 1px solid #eef2f7;
-    padding-top: 20px;
-}
-.filter-form {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    align-items: center;
-}
-.filter-form select, .bulk-actions-container select {
-    padding: 10px;
-    border-radius: 8px;
-    border: 1px solid #dcdfe6;
-    background-color: #fff;
-    font-size: 14px;
-}
-.filter-form select:focus, .bulk-actions-container select:focus {
-    outline: none;
-    border-color: #409eff;
-    box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
-}
-.btn {
-    padding: 10px 20px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    text-decoration: none;
-    font-weight: 600;
-    transition: all 0.2s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-}
-.btn-primary { 
-    background-color: #409eff; 
-    color: white; 
-    box-shadow: 0 4px 10px rgba(64, 158, 255, 0.2);
-}
-.btn-primary:hover {
-    background-color: #3a8ee6;
-    box-shadow: 0 6px 15px rgba(64, 158, 255, 0.3);
-}
-.btn-secondary {
-    background-color: #f0f2f5;
-    color: #57606f;
-    border: 1px solid #dcdfe6;
-}
-.btn-secondary:hover {
-    background-color: #e4e7ed;
-    border-color: #c8cdd8;
-}
-.btn-warning {
-    background-color: #f59e0b;
-    color: white;
-    box-shadow: 0 4px 10px rgba(245, 158, 11, 0.2);
-}
-.btn-warning:hover {
-    background-color: #d97706;
-    box-shadow: 0 6px 15px rgba(245, 158, 11, 0.3);
-}
-.btn-sm {
-    padding: 6px 12px;
-    font-size: 12px;
-    font-weight: 500;
-}
-.action-buttons {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-}
-.pagination {
-    padding: 20px;
-    text-align: right;
-}
-.pagination a, .pagination span {
-    margin: 0 5px;
-    padding: 8px 15px;
-    text-decoration: none;
-    border-radius: 8px;
-    transition: all 0.2s ease;
-}
-.pagination a {
-    color: #57606f;
-    background-color: #fff;
-    border: 1px solid #dcdfe6;
-}
-.pagination a:hover {
-    background-color: #409eff;
-    color: #fff;
-    border-color: #409eff;
-}
-.pagination span.disabled {
-    color: #c0c4cc;
-}
-.pagination span.current-page {
-    background-image: linear-gradient(45deg, #409eff, #3a8ee6);
-    color: white;
-    border: none;
-    box-shadow: 0 4px 10px rgba(64, 158, 255, 0.3);
-}
+        /* =================================================================== */
+        /* === E) NOTIFICATION STYLING ======================================= */
+        /* =================================================================== */
+        .notification {
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        .notification.info {
+            background-color: #e8f4fd;
+            color: #1890ff;
+            border-left: 4px solid #1890ff;
+        }
+        .notification.success {
+            background-color: #f6ffed;
+            color: #52c41a;
+            border-left: 4px solid #52c41a;
+        }
+        .notification.error {
+            background-color: #fff2f0;
+            color: #ff4d4f;
+            border-left: 4px solid #ff4d4f;
+        }
+        .notification.warning {
+            background-color: #fffbe6;
+            color: #faad14;
+            border-left: 4px solid #faad14;
+        }
 
-/* =================================================================== */
-/* === E) NOTIFICATION STYLING ======================================= */
-/* =================================================================== */
-.notification {
-    padding: 15px 20px;
-    margin-bottom: 20px;
-    border-radius: 8px;
-    font-weight: 500;
-}
-.notification.info {
-    background-color: #e8f4fd;
-    color: #1890ff;
-    border-left: 4px solid #1890ff;
-}
-.notification.success {
-    background-color: #f6ffed;
-    color: #52c41a;
-    border-left: 4px solid #52c41a;
-}
-.notification.error {
-    background-color: #fff2f0;
-    color: #ff4d4f;
-    border-left: 4px solid #ff4d4f;
-}
-.notification.warning {
-    background-color: #fffbe6;
-    color: #faad14;
-    border-left: 4px solid #faad14;
-}
+        /* =================================================================== */
+        /* === F) MODAL STYLING ============================================== */
+        /* =================================================================== */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
 
-/* =================================================================== */
-/* === F) MODAL STYLING ============================================== */
-/* =================================================================== */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    backdrop-filter: blur(4px);
-}
+        .modal-overlay.active {
+            display: flex;
+        }
 
-.modal-overlay.active {
-    display: flex;
-}
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            transform: scale(0.7);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
 
-.modal-content {
-    background: white;
-    border-radius: 12px;
-    width: 90%;
-    max-width: 900px;
-    max-height: 90vh;
-    overflow-y: auto;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    transform: scale(0.7);
-    opacity: 0;
-    transition: all 0.3s ease;
-}
+        .modal-overlay.active .modal-content {
+            transform: scale(1);
+            opacity: 1;
+        }
 
-.modal-overlay.active .modal-content {
-    transform: scale(1);
-    opacity: 1;
-}
+        .modal-header {
+            background: linear-gradient(135deg, #409eff, #3a8ee6);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-.modal-header {
-    background: linear-gradient(135deg, #409eff, #3a8ee6);
-    color: white;
-    padding: 20px 30px;
-    border-radius: 12px 12px 0 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 0;
+        }
 
-.modal-title {
-    font-size: 1.5rem;
-    font-weight: 600;
-    margin: 0;
-}
+        .modal-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            transition: background-color 0.2s ease;
+        }
 
-.modal-close {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 1.5rem;
-    cursor: pointer;
-    padding: 5px;
-    border-radius: 50%;
-    transition: background-color 0.2s ease;
-}
+        .modal-close:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
 
-.modal-close:hover {
-    background-color: rgba(255, 255, 255, 0.2);
-}
+        .modal-body {
+            padding: 30px;
+        }
 
-.modal-body {
-    padding: 30px;
-}
+        /* Fee Summary in Modal */
+        .fee-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+        }
 
-/* Fee Summary in Modal */
-.fee-summary {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 15px;
-    margin-bottom: 25px;
-    background: #f8f9fa;
-    padding: 20px;
-    border-radius: 8px;
-}
+        .fee-stat {
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
 
-.fee-stat {
-    text-align: center;
-    padding: 15px;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
+        .fee-stat-label {
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
 
-.fee-stat-label {
-    font-size: 0.8rem;
-    color: #6b7280;
-    margin-bottom: 5px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
+        .fee-stat-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #374151;
+        }
 
-.fee-stat-value {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #374151;
-}
+        .fee-stat-balance.positive { color: #10b981; }
+        .fee-stat-balance.negative { color: #ef4444; }
 
-.fee-stat-balance.positive { color: #10b981; }
-.fee-stat-balance.negative { color: #ef4444; }
+        /* Form Styling in Modal */
+        .form-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border-left: 4px solid #409eff;
+        }
 
-/* Form Styling in Modal */
-.form-section {
-    margin-bottom: 30px;
-    padding: 20px;
-    background: #f8fafc;
-    border-radius: 8px;
-    border-left: 4px solid #409eff;
-}
+        .form-section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
 
-.form-section-title {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #374151;
-    margin-bottom: 15px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
+        .form-group {
+            margin-bottom: 15px;
+        }
 
-.form-group {
-    margin-bottom: 15px;
-}
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #374151;
+            font-size: 0.9rem;
+        }
 
-.form-label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: 500;
-    color: #374151;
-    font-size: 0.9rem;
-}
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            transition: border-color 0.2s ease;
+            box-sizing: border-box;
+        }
 
-.form-control {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    transition: border-color 0.2s ease;
-    box-sizing: border-box;
-}
+        .form-control:focus {
+            outline: none;
+            border-color: #409eff;
+            box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.1);
+        }
 
-.form-control:focus {
-    outline: none;
-    border-color: #409eff;
-    box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.1);
-}
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
 
-.form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-}
+        /* Payment History */
+        .payment-history {
+            margin-top: 25px;
+        }
 
-/* Payment History */
-.payment-history {
-    margin-top: 25px;
-}
+        .payment-history-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 0.85rem;
+        }
 
-.payment-history-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 15px;
-    font-size: 0.85rem;
-}
+        .payment-history-table th,
+        .payment-history-table td {
+            padding: 8px 12px;
+            border: 1px solid #e5e7eb;
+            text-align: left;
+        }
 
-.payment-history-table th,
-.payment-history-table td {
-    padding: 8px 12px;
-    border: 1px solid #e5e7eb;
-    text-align: left;
-}
+        .payment-history-table th {
+            background-color: #f3f4f6;
+            font-weight: 600;
+            color: #374151;
+        }
 
-.payment-history-table th {
-    background-color: #f3f4f6;
-    font-weight: 600;
-    color: #374151;
-}
+        .payment-history-table tbody tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
 
-.payment-history-table tbody tr:nth-child(even) {
-    background-color: #f9fafb;
-}
+        /* Action buttons in modal */
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
 
-/* Action buttons in modal */
-.modal-actions {
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-    margin-top: 20px;
-    padding-top: 20px;
-    border-top: 1px solid #e5e7eb;
-}
+        .btn-success {
+            background-color: #10b981;
+            color: white;
+        }
 
-.btn-success {
-    background-color: #10b981;
-    color: white;
-}
+        .btn-success:hover {
+            background-color: #059669;
+        }
 
-.btn-success:hover {
-    background-color: #059669;
-}
+        /* Loading state */
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
 
-/* Loading state */
-.loading {
-    opacity: 0.7;
-    pointer-events: none;
-}
+        .spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #409eff;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 8px;
+        }
 
-.spinner {
-    border: 2px solid #f3f3f3;
-    border-top: 2px solid #409eff;
-    border-radius: 50%;
-    width: 16px;
-    height: 16px;
-    animation: spin 1s linear infinite;
-    display: inline-block;
-    margin-right: 8px;
-}
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
 
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
+        /* Responsive */
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
 
-/* Responsive */
-@media (max-width: 768px) {
-    .modal-content {
-        width: 95%;
-        margin: 10px;
-    }
+            .modal-body {
+                padding: 20px;
+            }
 
-    .modal-body {
-        padding: 20px;
-    }
+            .fee-summary {
+                grid-template-columns: 1fr;
+            }
 
-    .fee-summary {
-        grid-template-columns: 1fr;
-    }
-
-    .form-row {
-        grid-template-columns: 1fr;
-    }
-}
-</style>
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
 
 <div class="content-header">
     <h1 class="title"><?= safeHtmlspecialchars($pageTitle); ?></h1>
@@ -1173,7 +1196,7 @@ body {
                             ?>
                             <tr data-student-id="<?= safeHtmlspecialchars($row['student_id']); ?>">
                                 <td><input type="checkbox" name="selected_ids[]" value="<?= safeHtmlspecialchars($row['student_id']); ?>" class="row-checkbox"></td>
-                                <td><?= safeHtmlspecialchars(trim($row['student_name'])); ?></td>
+                                <td><?= safeHtmlspecialchars(trim($row['student_name']), 'N/A'); ?></td>
                                 <td><?= safeHtmlspecialchars($row['class']); ?></td>
                                 <td><?= safeHtmlspecialchars($row['parent_name'], 'N/A'); ?></td>
                                 <td class="total-fee-cell">$<?= htmlspecialchars(number_format(floatval($row['total_fee']), 2)); ?></td>
@@ -1192,13 +1215,12 @@ body {
                                 <td class="action-cell">
                                     <div class="action-buttons">
                                         <button type="button" class="btn btn-primary btn-sm update-fee-btn" 
-                                                data-student-id="<?= safeHtmlspecialchars($row['student_id']); ?>" 
-                                                data-student-name="<?= safeHtmlspecialchars(trim($row['student_name'])); ?>"
-                                                title="Update Fee Details">
+                                                 data-student-id="<?= safeHtmlspecialchars($row['student_id']); ?>" 
+                                                 data-student-name="<?= safeHtmlspecialchars(trim($row['student_name'])); ?>"
+                                                 title="Update Fee Details">
                                             <i class="fas fa-edit"></i> Update
                                         </button>
                                         
-                                        <?php // Show reminder button if there is a balance due and status is Pending or Overdue ?>
                                         <?php if (($row['status'] === 'Pending' || $row['status'] === 'Overdue') && floatval($row['amount_due']) > 0): ?>
                                             <a href="send_reminder.php?student_id=<?= safeHtmlspecialchars($row['student_id']); ?>" 
                                                class="btn btn-warning btn-sm" 
@@ -1487,18 +1509,19 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateSummaryDisplay(data) {
         const totalFee = parseFloat(data.total_fee || 0);
         const amountPaid = parseFloat(data.amount_paid || 0);
-        const balance = Math.max(0, totalFee - amountPaid);
+        const balance = totalFee - amountPaid;
         
-        document.getElementById('summaryTotalFee').textContent = `${totalFee.toFixed(2)}`;
-        document.getElementById('summaryAmountPaid').textContent = `${amountPaid.toFixed(2)}`;
+        document.getElementById('summaryTotalFee').textContent = `$${totalFee.toFixed(2)}`;
+        document.getElementById('summaryAmountPaid').textContent = `$${amountPaid.toFixed(2)}`;
         
         const balanceEl = document.getElementById('summaryBalance');
-        balanceEl.textContent = `${balance.toFixed(2)}`;
+        balanceEl.textContent = `$${balance.toFixed(2)}`;
         balanceEl.className = `fee-stat-value fee-stat-balance ${balance <= 0 ? 'positive' : 'negative'}`;
         
         const statusEl = document.getElementById('summaryStatus');
-        statusEl.textContent = data.status || 'Pending';
-        statusEl.className = `status-pill status-${(data.status || 'pending').toLowerCase().replace(' ', '-')}`;
+        const statusText = data.status || 'Pending';
+        statusEl.textContent = statusText;
+        statusEl.className = `status-pill status-${(statusText).toLowerCase().replace(' ', '-')}`;
     }
 
     function loadPaymentHistory(payments) {
@@ -1530,7 +1553,7 @@ document.addEventListener('DOMContentLoaded', function() {
             historyHTML += `
                 <tr>
                     <td>${paymentDate}</td>
-                    <td>${parseFloat(payment.amount).toFixed(2)}</td>
+                    <td>$${parseFloat(payment.amount).toFixed(2)}</td>
                     <td>${payment.payment_method}</td>
                     <td>${payment.received_by}</td>
                 </tr>
@@ -1548,13 +1571,13 @@ document.addEventListener('DOMContentLoaded', function() {
         function updateLiveSummary() {
             const totalFee = parseFloat(totalFeeInput.value) || 0;
             const amountPaid = parseFloat(amountPaidInput.value) || 0;
-            const balance = Math.max(0, totalFee - amountPaid);
+            const balance = totalFee - amountPaid;
             
-            document.getElementById('summaryTotalFee').textContent = `${totalFee.toFixed(2)}`;
-            document.getElementById('summaryAmountPaid').textContent = `${amountPaid.toFixed(2)}`;
+            document.getElementById('summaryTotalFee').textContent = `$${totalFee.toFixed(2)}`;
+            document.getElementById('summaryAmountPaid').textContent = `$${amountPaid.toFixed(2)}`;
             
             const balanceEl = document.getElementById('summaryBalance');
-            balanceEl.textContent = `${balance.toFixed(2)}`;
+            balanceEl.textContent = `$${balance.toFixed(2)}`;
             balanceEl.className = `fee-stat-value fee-stat-balance ${balance <= 0 ? 'positive' : 'negative'}`;
             
             // Update status preview
@@ -1612,12 +1635,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!row) return;
         
         // Update cells
-        row.querySelector('.total-fee-cell').textContent = `${parseFloat(data.total_fee).toFixed(2)}`;
-        row.querySelector('.amount-paid-cell').textContent = `${parseFloat(data.amount_paid).toFixed(2)}`;
+        row.querySelector('.total-fee-cell').textContent = `$${parseFloat(data.total_fee).toFixed(2)}`;
+        row.querySelector('.amount-paid-cell').textContent = `$${parseFloat(data.amount_paid).toFixed(2)}`;
         
-        const balance = Math.max(0, data.total_fee - data.amount_paid);
+        const balance = data.total_fee - data.amount_paid;
         const amountDueCell = row.querySelector('.amount-due-cell');
-        amountDueCell.textContent = `${balance.toFixed(2)}`;
+        amountDueCell.textContent = `$${balance.toFixed(2)}`;
         amountDueCell.className = balance > 0 ? 'amount-due-cell amount-due' : 'amount-due-cell';
         
         // Update status
@@ -1772,11 +1795,12 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-
+</body>
+</html>
 <?php
 // Clean up and close statements
 if (isset($stmt)) $stmt->close();
-
-// Include the footer
+// We are not closing the connection here to allow for subsequent AJAX calls.
+// In a real application, you'd close the connection at the end of the script execution.
 include 'sa_footer.php';
 ?>

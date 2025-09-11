@@ -293,11 +293,10 @@ if (empty($_SESSION['csrf_token'])) {
     <header class="admin-header">
         <div class="logo">
             <i class="fas fa-graduation-cap" style="font-size: 2rem; color: var(--primary-color);"></i>
-            <h1>Admin Panel - Bulk User Upload</h1>
+            <h1> Bulk User Upload</h1>
         </div>
         <div class="user-info">
-            <span>Welcome, Admin</span>
-            <a href="admin_home.php" class="btn btn-secondary">
+            <a href="admin/admin_home.php" class="btn btn-secondary">
                 <i class="fas fa-arrow-left"></i> Back to Dashboard
             </a>
         </div>
@@ -372,9 +371,8 @@ if (empty($_SESSION['csrf_token'])) {
                     <li><strong>Required columns:</strong> username, email, password, role</li>
                     <li><strong>Optional columns:</strong> status (defaults to 'pending')</li>
                     <li><strong>Valid roles:</strong> student, staff, admin, parent</li>
-                    <li><strong>Valid statuses:</strong> active, pending, suspended</li>
                     <li><strong>Email addresses must be unique</strong></li>
-                    <li><strong>Usernames must be unique</strong></li>
+                    <li><strong>First and Lastnames(usernames) must be unique</strong></li>
                     <li><strong>Passwords will be automatically hashed</strong></li>
                     <li><strong>Student IDs will be auto-generated for students</strong></li>
                     <li><strong>Maximum 1000 users per upload</strong></li>
@@ -610,38 +608,35 @@ if (empty($_SESSION['csrf_token'])) {
         }
 
         function downloadTemplate(type) {
-            if (type === 'csv') {
-                // Create CSV content
-                const headers = ['username', 'email', 'password', 'role', 'status'];
-                const sampleData = [
-                    ['John Doe', 'john.doe@example.com', 'password123', 'student', 'active'],
-                    ['Jane Smith', 'jane.smith@example.com', 'securepass456', 'staff', 'pending'],
-                    ['Mike Johnson', 'mike.j@example.com', 'mypassword789', 'student', 'active'],
-                    ['Sarah Wilson', 'sarah.w@example.com', 'adminpass000', 'admin', 'active'],
-                    ['Tom Brown', 'tom.brown@example.com', 'parentpass111', 'parent', 'pending']
-                ];
+    if (type === 'csv') {
+        // Create CSV content (keep existing functionality)
+        const headers = ['username', 'email', 'password', 'role', 'status'];
+        const sampleData = [
+            ['Frist name Last name', 'john@example.com', 'password123', 'student', 'pending'],
+            ['Jane Smith', 'janesmith@example.com', 'securepass456', 'staff', 'pending'],
+            ['Mike Fan', 'mike@example.com', 'mypassword789', 'student', 'pending'],
+            ['Sarah Wilson', 'sarah@example.com', 'adminpass000', 'admin', 'pending'],
+            ['Parent P', 'parent@example.com', 'parentpass111', 'parent', 'pending']
+        ];
 
-                let csvContent = headers.join(',') + '\n';
-                sampleData.forEach(row => {
-                    csvContent += row.map(field => `"${field}"`).join(',') + '\n';
-                });
+        let csvContent = headers.join(',') + '\n';
+        sampleData.forEach(row => {
+            csvContent += row.map(field => `"${field}"`).join(',') + '\n';
+        });
 
-                // Download CSV
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = 'bulk_users_template.csv';
-                link.click();
-                URL.revokeObjectURL(link.href);
-                
-            } else if (type === 'excel') {
-                // For Excel, you could either:
-                // 1. Use a library like SheetJS to generate real Excel files
-                // 2. Or redirect to a PHP script that generates Excel
-                window.open('bulk_upload_users.php?action=download_template&format=excel', '_blank');
-            }
-        }
-
+        // Download CSV
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'bulk_users_template.csv';
+        link.click();
+        URL.revokeObjectURL(link.href);
+        
+    } else if (type === 'excel') {
+        // Use the new download_template.php file
+        window.open('download_template.php?action=download_template&format=excel', '_blank');
+    }
+}
         function exportResults() {
             if (!uploadResults) {
                 alert('No results to export');

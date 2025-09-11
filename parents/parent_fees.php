@@ -8,6 +8,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'parent') {
     exit();
 }
 
+
 $user_id = $_SESSION['user_id'];
 
 // --- FETCH ALL CHILDREN ASSIGNED TO THIS PARENT ---
@@ -124,6 +125,9 @@ while ($row = $result->fetch_assoc()) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fees Overview - Parent Portal</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- Favicon -->
+    <link rel="icon" type="image/jpeg" href="../images/logo.jpeg">
+    <link rel="shortcut icon" type="image/jpeg" href="../images/logo.jpeg">
     <style>
         * {
             margin: 0;
@@ -421,7 +425,7 @@ while ($row = $result->fetch_assoc()) {
 <body>
     <header class="header">
         <div class="brand">
-            <img src="../images/logo.jpg" alt="Wisetech College Logo">
+            <img src="../images/logo.jpeg" alt="Solid Rock  Logo">
             <h1>Parent Portal</h1>
         </div>
         <div class="nav-actions">
@@ -547,7 +551,7 @@ while ($row = $result->fetch_assoc()) {
     </div>
 
     <footer style="text-align: center; padding: 30px; color: #666;">
-        <p>&copy; <?php echo date("Y"); ?> Wisetech College Portal | All Rights Reserved</p>
+        <p>&copy; <?php echo date("Y"); ?> Mirilax-Scales Portal | All Rights Reserved</p>
     </footer>
 </body>
 </html>

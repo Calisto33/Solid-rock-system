@@ -380,6 +380,7 @@ $classesResult = $conn->query($classesQuery);
                     </form>
                 </div>
             </div>
+            
 
             <!-- Add Class Form -->
             <div class="card">

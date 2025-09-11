@@ -11,7 +11,6 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'parent') {
 $user_id = $_SESSION['user_id'];
 
 // --- FETCH ALL CHILDREN ASSIGNED TO THIS PARENT ---
-// Updated to use the correct table name: student_parent_relationships (not parent_student_relationships)
 $childrenQuery = "
     SELECT DISTINCT
         s.student_id as student_internal_id,
@@ -59,7 +58,7 @@ $student_id = $currentChild['student_id'];
 $student_name = $currentChild['student_name'];
 $student_class = $currentChild['class'] ?? 'N/A';
 
-// Check fee status - Updated to use student_id instead of int
+// Check fee status
 $feeQuery = "SELECT status FROM fees WHERE student_id = ? LIMIT 1";
 $stmt = $conn->prepare($feeQuery);
 if (!$stmt) {
@@ -119,27 +118,63 @@ function markToGrade($mark) {
 }
 
 if ($fees_cleared) {
-    $resultsQuery = "
-        SELECT
-            r.result_id, 
-            COALESCE(s.subject_name, r.subject) as subject_name, 
-            r.final_mark, 
-            r.final_grade, 
-            r.target_grade, 
-            r.attitude_to_learning, 
-            r.comments, 
-            r.term, 
-            r.year,
-            MAX(CASE WHEN ta.assessment_name = 'Assessment 1' THEN ta.mark END) AS assessment_1_mark,
-            MAX(CASE WHEN ta.assessment_name = 'Assessment 2' THEN ta.mark END) AS assessment_2_mark,
-            MAX(CASE WHEN ta.assessment_name = 'End of Term Exam' THEN ta.mark END) AS exam_mark
-        FROM results r
-        LEFT JOIN subjects s ON r.subject_id = s.subject_id
-        LEFT JOIN term_assessments ta ON r.result_id = ta.result_id
-        WHERE r.student_id = ?
-        GROUP BY r.result_id, s.subject_name, r.subject, r.final_mark, r.final_grade, r.target_grade, 
-                 r.attitude_to_learning, r.comments, r.term, r.year
-        ORDER BY r.year DESC, r.term DESC, COALESCE(s.subject_name, r.subject) ASC";
+    // More robust query that handles your data structure better:
+
+$resultsQuery = "
+    SELECT
+        r.result_id, 
+        COALESCE(NULLIF(s.subject_name, ''), NULLIF(r.subject, ''), 'Unknown Subject') as subject_name, 
+        r.final_mark, 
+        COALESCE(NULLIF(r.final_grade, ''), r.grade) as final_grade,  -- Fallback to 'grade' column if final_grade is NULL
+        r.target_grade, 
+        r.attitude_to_learning, 
+        r.comments, 
+        r.term, 
+        r.year,
+        MAX(CASE WHEN ta.assessment_name = 'Assessment 1' THEN ta.mark END) AS assessment_1_mark,
+        MAX(CASE WHEN ta.assessment_name = 'Assessment 2' THEN ta.mark END) AS assessment_2_mark,
+        MAX(CASE WHEN ta.assessment_name = 'End of Term Exam' THEN ta.mark END) AS exam_mark
+    FROM results r
+    LEFT JOIN subjects s ON r.subject_id = s.subject_id
+    LEFT JOIN term_assessments ta ON r.result_id = ta.result_id
+    WHERE r.student_id = ?
+    GROUP BY r.result_id, s.subject_name, r.subject, r.final_mark, r.final_grade, r.grade, r.target_grade, 
+             r.attitude_to_learning, r.comments, r.term, r.year
+    ORDER BY r.year DESC, r.term DESC, COALESCE(NULLIF(s.subject_name, ''), NULLIF(r.subject, ''), 'Unknown Subject') ASC";
+
+$stmt_results = $conn->prepare($resultsQuery);
+if (!$stmt_results) { 
+    die("Error preparing results query: " . $conn->error); 
+}
+$stmt_results->bind_param("s", $student_id);
+$stmt_results->execute();
+$results = $stmt_results->get_result();
+
+// Add some debugging
+echo "<!-- DEBUG: Querying for student_id: " . $student_id . " -->";
+if ($results) {
+    echo "<!-- DEBUG: Number of results found: " . $results->num_rows . " -->";
+    
+    while ($row = $results->fetch_assoc()) {
+        // Generate exam grade from final_mark if not present
+        if (empty($row['final_grade']) && !empty($row['final_mark'])) {
+            $row['final_grade'] = markToGrade($row['final_mark']);
+        }
+        
+        if (empty($row['exam_grade'])) {
+            $row['exam_grade'] = markToGrade($row['exam_mark']);
+        }
+        
+        $report_key = "{$row['term']}|{$row['year']}";
+        $all_results_by_term[$report_key][] = $row;
+        
+        // Debug output
+        echo "<!-- DEBUG: Found record - Term: {$row['term']}, Year: {$row['year']}, Subject: {$row['subject_name']} -->";
+    }
+} else {
+    echo "<!-- DEBUG: Query failed or returned no results -->";
+}
+$stmt_results->close();
 
     $stmt_results = $conn->prepare($resultsQuery);
     if (!$stmt_results) { 
@@ -151,7 +186,6 @@ if ($fees_cleared) {
 
     if ($results) {
         while ($row = $results->fetch_assoc()) {
-            // Convert exam mark to grade if not available
             if (empty($row['exam_grade'])) {
                 $row['exam_grade'] = markToGrade($row['exam_mark']);
             }
@@ -169,518 +203,519 @@ if ($fees_cleared) {
         }
     }
 }
+
+// Include header
+include 'header.php';
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Progress Report</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<style>
+    /* Additional styles for the results page */
+    .child-selector {
+        background: var(--background-white);
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
 
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f5f5f5;
-            color: #333;
-            line-height: 1.6;
-        }
+    .child-selector h3 {
+        color: var(--primary-color);
+        margin-bottom: 1rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
 
-        .header {
-            background: white;
-            padding: 15px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #ddd;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
+    .child-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
 
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
+    .child-tab {
+        padding: 0.75rem 1.5rem;
+        background: var(--background-light);
+        color: var(--text-dark);
+        text-decoration: none;
+        border-radius: 0.375rem;
+        border: 2px solid transparent;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
 
-        .brand img {
-            height: 50px;
-            border-radius: 50%;
-        }
+    .child-tab.active {
+        background: var(--primary-color);
+        color: white;
+        border-color: #2563eb;
+    }
 
-        .brand h1 {
-            font-size: 24px;
-            color: #4A90E2;
-        }
+    .child-tab:hover:not(.active) {
+        background: #e5e7eb;
+    }
 
-        .nav-actions {
-            display: flex;
-            gap: 15px;
-        }
+    .content-box {
+        background: var(--background-white);
+        border-radius: 0.5rem;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
 
-        .nav-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 20px;
-            background-color: transparent;
-            color: #4A90E2;
-            border: 2px solid #4A90E2;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: bold;
-        }
+    .content-header {
+        background: linear-gradient(135deg, var(--primary-color), #2563eb);
+        color: white;
+        padding: 2rem;
+        text-align: center;
+    }
 
-        .nav-btn:hover {
-            background-color: #4A90E2;
-            color: white;
-        }
+    .content-header h2 {
+        font-size: 1.75rem;
+        margin-bottom: 0.5rem;
+        font-weight: 700;
+    }
 
-        .nav-btn.primary {
-            background-color: #4A90E2;
-            color: white;
-        }
+    .content-body {
+        padding: 2rem;
+    }
 
-        .container {
-            max-width: 1200px;
-            margin: 30px auto;
-            padding: 0 20px;
-        }
+    .report-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.25rem 2rem;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid var(--border-color);
+        font-weight: 600;
+    }
 
-        .child-selector {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 30px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        color: var(--primary-color);
+        text-decoration: none;
+        font-weight: 500;
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        border: 1px solid var(--primary-color);
+        transition: all 0.2s ease;
+    }
 
-        .child-selector h3 {
-            color: #4A90E2;
-            margin-bottom: 15px;
-        }
+    .back-link:hover {
+        background: var(--primary-color);
+        color: white;
+    }
 
-        .child-tabs {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
+    .report-list {
+        list-style: none;
+        padding: 0;
+        margin-top: 1.5rem;
+    }
 
-        .child-tab {
-            padding: 10px 20px;
-            background: #f0f0f0;
-            color: #333;
-            text-decoration: none;
-            border-radius: 5px;
-            border: 2px solid transparent;
-        }
+    .report-list-item {
+        margin-bottom: 1rem;
+    }
 
-        .child-tab.active {
-            background: #4A90E2;
-            color: white;
-            border-color: #357ABD;
-        }
+    .report-list-item a {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1.5rem;
+        background-color: var(--background-white);
+        border-radius: 0.5rem;
+        text-decoration: none;
+        color: var(--text-dark);
+        border-left: 4px solid var(--primary-color);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        transition: all 0.2s ease;
+    }
 
-        .child-tab:hover {
-            background: #e0e0e0;
-        }
+    .report-list-item a:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
 
-        .child-tab.active:hover {
-            background: #357ABD;
-        }
+    .table-responsive {
+        overflow-x: auto;
+        margin-top: 1.5rem;
+        border-radius: 0.5rem;
+        border: 1px solid var(--border-color);
+    }
 
-        .content-box {
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 800px;
+    }
 
-        .content-header {
-            background: linear-gradient(135deg, #4A90E2, #357ABD);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
+    th {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        text-align: center;
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: var(--text-muted);
+        border-bottom: 2px solid var(--border-color);
+        white-space: nowrap;
+    }
 
-        .content-header h2 {
-            font-size: 28px;
-            margin-bottom: 10px;
-        }
+    th:first-child {
+        text-align: left;
+    }
 
+    td {
+        padding: 1rem;
+        border-bottom: 1px solid #f1f3f4;
+        text-align: center;
+        font-size: 0.875rem;
+    }
+
+    td:first-child {
+        text-align: left;
+        font-weight: 500;
+    }
+
+    tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    .comment-cell {
+        min-width: 200px;
+        text-align: left;
+        font-size: 0.875rem;
+        color: var(--text-muted);
+        max-width: 250px;
+        word-wrap: break-word;
+    }
+
+    .icon-success {
+        color: #10b981;
+        font-size: 1.125rem;
+    }
+
+    .icon-danger {
+        color: #ef4444;
+        font-size: 1.125rem;
+    }
+
+    .message {
+        text-align: center;
+        padding: 3rem 2rem;
+        border-radius: 0.5rem;
+        background-color: #fef3c7;
+        color: #92400e;
+    }
+
+    .message.fees-outstanding {
+        background-color: #fecaca;
+        color: #991b1b;
+    }
+
+    .message i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.7;
+        display: block;
+    }
+
+    .message p {
+        font-size: 1.125rem;
+    }
+
+    .message p:first-of-type {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .key-section {
+        background-color: #f8f9fa;
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-top: 2rem;
+    }
+
+    .key-section h4 {
+        margin-bottom: 1rem;
+        color: var(--text-dark);
+        font-weight: 600;
+    }
+
+    .key-section ul {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 0.75rem;
+        list-style: none;
+    }
+
+    .key-section li {
+        font-size: 0.875rem;
+    }
+
+    .debug-info {
+        background-color: #f8f9fa;
+        border: 1px solid var(--border-color);
+        border-radius: 0.375rem;
+        padding: 1rem;
+        margin: 1.5rem 0;
+        font-family: 'Courier New', monospace;
+        font-size: 0.75rem;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 992px) {
         .content-body {
-            padding: 30px;
+            padding: 1.5rem;
         }
-
+        
+        .content-header {
+            padding: 1.5rem;
+        }
+        
         .report-info {
-            display: flex;
-            justify-content: space-between;
-            padding: 20px 30px;
-            background-color: #f9f9f9;
-            border-bottom: 1px solid #ddd;
-            font-weight: bold;
+            flex-direction: column;
+            gap: 0.5rem;
+            align-items: flex-start;
+            padding: 1rem 1.5rem;
         }
-
-        .back-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 20px;
-            color: #4A90E2;
-            text-decoration: none;
-            font-weight: bold;
-        }
-
-        .back-link:hover {
-            text-decoration: underline;
-        }
-
-        .report-list {
-            list-style: none;
-            padding: 0;
-        }
-
-        .report-list-item {
-            margin-bottom: 15px;
-        }
-
-        .report-list-item a {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 20px;
-            background-color: white;
-            border-radius: 8px;
-            text-decoration: none;
-            color: #333;
-            border-left: 5px solid #4A90E2;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-
-        .report-list-item a:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-        }
-
-        .table-responsive {
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        th {
-            background-color: #f9f9f9;
-            padding: 15px;
-            text-align: center;
-            font-weight: bold;
-            font-size: 12px;
-            text-transform: uppercase;
-            color: #666;
-            border-bottom: 2px solid #ddd;
-        }
-
-        th:first-child {
-            text-align: left;
-        }
-
-        td {
-            padding: 15px;
-            border-bottom: 1px solid #eee;
-            text-align: center;
-        }
-
-        td:first-child {
-            text-align: left;
-            font-weight: bold;
-        }
-
-        tbody tr:hover {
-            background-color: #f9f9f9;
-        }
-
-        .comment-cell {
-            min-width: 200px;
-            text-align: left;
-            font-size: 14px;
-            color: #666;
-        }
-
-        .icon-success {
-            color: #10B981;
-            font-size: 18px;
-        }
-
-        .icon-danger {
-            color: #EF4444;
-            font-size: 18px;
-        }
-
-        .message {
-            text-align: center;
-            padding: 50px 30px;
-            border-radius: 8px;
-            background-color: #fff3cd;
-            color: #856404;
-        }
-
-        .message.fees-outstanding {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
-
-        .message i {
-            font-size: 48px;
-            margin-bottom: 20px;
-            opacity: 0.7;
-        }
-
-        .key-section {
-            background-color: #f9f9f9;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 20px;
-            margin-top: 30px;
-        }
-
-        .key-section h4 {
-            margin-bottom: 15px;
-            color: #333;
-        }
-
+        
         .key-section ul {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px 30px;
-            list-style: none;
+            grid-template-columns: 1fr;
         }
+    }
 
-        .footer {
+    @media (max-width: 768px) {
+        .child-tabs {
+            flex-direction: column;
+        }
+        
+        .child-tab {
             text-align: center;
-            padding: 30px;
-            margin-top: 30px;
-            color: #666;
         }
-
-        .debug-info {
-            background-color: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 5px;
-            padding: 15px;
-            margin: 20px 0;
-            font-family: monospace;
-            font-size: 12px;
+        
+        .content-header h2 {
+            font-size: 1.5rem;
         }
-
-        @media (max-width: 768px) {
-            .header {
-                flex-direction: column;
-                gap: 15px;
-            }
-
-            .nav-actions {
-                flex-direction: column;
-                width: 100%;
-            }
-
-            .report-info {
-                flex-direction: column;
-                gap: 10px;
-            }
-
-            .child-tabs {
-                flex-direction: column;
-            }
-
-            table {
-                font-size: 14px;
-            }
-
-            th, td {
-                padding: 10px 8px;
-            }
+        
+        .table-responsive {
+            border-radius: 0;
+            margin-left: -1.5rem;
+            margin-right: -1.5rem;
+            border-left: none;
+            border-right: none;
         }
-    </style>
-</head>
-<body>
-    <header class="header">
-        <div class="brand">
-            <img src="../images/logo.jpg" alt="Wisetech College Logo">
-            <h1>Student Portal</h1>
-        </div>
-        <div class="nav-actions">
-            <a href="parent_home.php?child=<?= $selectedChildIndex ?>" class="nav-btn">
-                <i class="fas fa-home"></i> Home
-            </a>
-            <a href="../logout.php" class="nav-btn primary">
-                <i class="fas fa-sign-out-alt"></i> Logout
-            </a>
-        </div>
-    </header>
+        
+        th, td {
+            padding: 0.75rem 0.5rem;
+            font-size: 0.8rem;
+        }
+        
+        .comment-cell {
+            min-width: 150px;
+            max-width: 180px;
+        }
+        
+        .message {
+            padding: 2rem 1rem;
+        }
+        
+        .message i {
+            font-size: 2.5rem;
+        }
+    }
 
-    <div class="container">
-        <?php if (count($children) > 1): ?>
-        <div class="child-selector">
-            <h3><i class="fas fa-users"></i> Select Child</h3>
-            <div class="child-tabs">
-                <?php foreach ($children as $index => $child): ?>
-                    <a href="?child=<?= $index ?><?= $selected_term && $selected_year ? '&term='.urlencode($selected_term).'&year='.urlencode($selected_year) : '' ?>" 
-                       class="child-tab <?= $index === $selectedChildIndex ? 'active' : '' ?>">
-                        <?= htmlspecialchars($child['student_name']) ?>
-                    </a>
-                <?php endforeach; ?>
-            </div>
-        </div>
-        <?php endif; ?>
+    @media (max-width: 576px) {
+        .content-body {
+            padding: 1rem;
+        }
+        
+        .content-header {
+            padding: 1rem;
+        }
+        
+        .content-header h2 {
+            font-size: 1.25rem;
+        }
+        
+        .report-info {
+            padding: 0.75rem 1rem;
+        }
+        
+        th, td {
+            padding: 0.5rem 0.25rem;
+            font-size: 0.75rem;
+        }
+        
+        .back-link {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.875rem;
+        }
+    }
+</style>
 
-        <div class="content-box">
-            <?php if (!$fees_cleared): ?>
-                <div class="content-body">
-                    <div class="message fees-outstanding">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <p style="font-weight: bold; font-size: 18px;">Academic Results Unavailable</p>
-                        <p>Please ensure all outstanding school fees are cleared to view <?= htmlspecialchars($student_name) ?>'s progress report.</p>
-                    </div>
-                </div>
-            <?php elseif ($selected_term && $selected_year): ?>
-                <div class="content-header">
-                    <h2>Progress Report: Term <?= htmlspecialchars($selected_term) ?> - <?= htmlspecialchars($selected_year) ?></h2>
-                    <p>Viewing results for <?= htmlspecialchars($student_name) ?></p>
-                </div>
-                <div class="report-info">
-                    <span>Student: <strong><?= htmlspecialchars($student_name) ?></strong></span>
-                    <span>Class: <strong><?= htmlspecialchars($student_class) ?></strong></span>
-                </div>
-                <div class="content-body">
-                    <a href="parent_results.php?child=<?= $selectedChildIndex ?>" class="back-link">
-                        <i class="fas fa-arrow-left"></i> View Other Reports
-                    </a>
-                    <?php if (!empty($selected_report_data)): ?>
-                        <div class="table-responsive">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Subject</th>
-                                        <th>Assessment 1 (%)</th>
-                                        <th>Assessment 2 (%)</th>
-                                        <th>End of Term Exam (%)</th>
-                                        <th>Exam Grade</th>
-                                        <th>Target Grade</th>
-                                        <th>On Target</th>
-                                        <th>Attitude (1-5)</th>
-                                        <th>Comments</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($selected_report_data as $row): ?>
-                                        <?php
-                                        $otg_display = '<span style="color: #999;">-</span>';
-                                        $final_grade_value = getGradeNumericValue($row['final_grade']);
-                                        $target_grade_value = getGradeNumericValue($row['target_grade']);
+<?php
+// Include sidebar
+include 'sidebar.php';
+?>
 
-                                        if (!is_null($final_grade_value) && !is_null($target_grade_value)) {
-                                            $otg_display = ($final_grade_value >= $target_grade_value) ? 
-                                                '<span class="icon-success">✔</span>' : 
-                                                '<span class="icon-danger">✖</span>';
-                                        }
-                                        ?>
-                                        <tr>
-                                            <td><?= htmlspecialchars($row['subject_name'] ?? 'Unknown Subject') ?></td>
-                                            <td><?= format_mark($row['assessment_1_mark']) ?></td>
-                                            <td><?= format_mark($row['assessment_2_mark']) ?></td>
-                                            <td><?= format_mark($row['exam_mark']) ?></td>
-                                            <td><?= htmlspecialchars($row['exam_grade'] ?? '-') ?></td>
-                                            <td><?= htmlspecialchars($row['target_grade'] ?? '-') ?></td>
-                                            <td><?= $otg_display ?></td>
-                                            <td><?= htmlspecialchars($row['attitude_to_learning'] ?? '-') ?></td>
-                                            <td class="comment-cell"><?= htmlspecialchars($row['comments'] ?? '') ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="key-section">
-                            <h4>Key Definitions</h4>
-                            <ul>
-                                <li><strong>Assessment 1/2:</strong> Coursework Assessment Mark</li>
-                                <li><strong>End of Term Exam:</strong> Final Exam Mark</li>
-                                <li><strong>Exam Grade:</strong> Grade for the End of Term Exam</li>
-                                <li><strong>Target Grade:</strong> Student's goal for the subject</li>
-                                <li><strong>On Target:</strong> <span class="icon-success">✔</span> Met / <span class="icon-danger">✖</span> Below Target</li>
-                                <li><strong>Attitude:</strong> Attitude to Learning (1-5)</li>
-                            </ul>
-                        </div>
-                    <?php else: ?>
-                        <div class="message">
-                            <p>No progress report data found for this period.</p>
-                        </div>
-                    <?php endif; ?>
-                </div>
-
-            <?php elseif (!empty($all_results_by_term)): ?>
-                <div class="content-header">
-                    <h2>View Progress Report</h2>
-                    <p>Select a report for <?= htmlspecialchars($student_name) ?></p>
-                </div>
-                <div class="content-body">
-                    <p>Please select a report to view the detailed progress for <strong><?= htmlspecialchars($student_name) ?></strong>.</p>
-                    <ul class="report-list">
-                        <?php foreach ($all_results_by_term as $key => $results):
-                            list($term, $year) = explode('|', $key);
-                        ?>
-                            <li class="report-list-item">
-                                <a href="parent_results.php?child=<?= $selectedChildIndex ?>&term=<?= urlencode($term) ?>&year=<?= urlencode($year) ?>">
-                                    <span>
-                                        <i class="fas fa-file-alt" style="margin-right: 12px;"></i>
-                                        Progress Report: Term <?= htmlspecialchars($term) ?> - <?= htmlspecialchars($year) ?>
-                                    </span>
-                                    <span><i class="fas fa-chevron-right"></i></span>
-                                </a>
-                            </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </div>
-            <?php else: ?>
-                <div class="content-header">
-                    <h2>Progress Report</h2>
-                    <p>Results for <?= htmlspecialchars($student_name) ?></p>
-                </div>
-                <div class="content-body">
-                    <div class="message">
-                        <i class="fas fa-folder-open"></i>
-                        <p>No progress report data has been published for <?= htmlspecialchars($student_name) ?> yet.</p>
-                    </div>
-                    
-                    <!-- Debug information -->
-                    <?php if (isset($_GET['debug'])): ?>
-                    <div class="debug-info">
-                        <h4>Debug Information:</h4>
-                        <p><strong>User ID:</strong> <?= $user_id ?></p>
-                        <p><strong>Selected Student ID:</strong> <?= $student_id ?></p>
-                        <p><strong>Student Name:</strong> <?= $student_name ?></p>
-                        <p><strong>Fees Cleared:</strong> <?= $fees_cleared ? 'Yes' : 'No' ?></p>
-                        <p><strong>Children Found:</strong> <?= count($children) ?></p>
-                        <p><strong>Results Found:</strong> <?= count($all_results_by_term) ?></p>
-                    </div>
-                    <?php endif; ?>
-                </div>
-            <?php endif; ?>
-        </div>
+    <!-- Page header content -->
+    <div class="header-title">
+        <h2>Student Results</h2>
+        <p>View academic progress and reports</p>
     </div>
 
-    <footer class="footer">
-        <p>&copy; <?php echo date("Y"); ?> Wisetech College Portal | All Rights Reserved</p>
-    </footer>
-</body>
-</html>
+    <!-- Main Content -->
+    <?php if (count($children) > 1): ?>
+    <div class="child-selector">
+        <h3><i class="fas fa-users"></i> Select Child</h3>
+        <div class="child-tabs">
+            <?php foreach ($children as $index => $child): ?>
+                <a href="?child=<?= $index ?><?= $selected_term && $selected_year ? '&term='.urlencode($selected_term).'&year='.urlencode($selected_year) : '' ?>" 
+                   class="child-tab <?= $index === $selectedChildIndex ? 'active' : '' ?>">
+                    <?= htmlspecialchars($child['student_name']) ?>
+                </a>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <div class="content-box">
+        <?php if (!$fees_cleared): ?>
+            <div class="content-body">
+                <div class="message fees-outstanding">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Academic Results Unavailable</p>
+                    <p>Please ensure all outstanding school fees are cleared to view <?= htmlspecialchars($student_name) ?>'s progress report.</p>
+                </div>
+            </div>
+        <?php elseif ($selected_term && $selected_year): ?>
+            <div class="content-header">
+                <h2>Progress Report: Term <?= htmlspecialchars($selected_term) ?> - <?= htmlspecialchars($selected_year) ?></h2>
+                <p>Viewing results for <?= htmlspecialchars($student_name) ?></p>
+            </div>
+            <div class="report-info">
+                <span>Student: <strong><?= htmlspecialchars($student_name) ?></strong></span>
+                <span>Class: <strong><?= htmlspecialchars($student_class) ?></strong></span>
+            </div>
+            <div class="content-body">
+                <a href="parent_results.php?child=<?= $selectedChildIndex ?>" class="back-link">
+                    <i class="fas fa-arrow-left"></i> View Other Reports
+                </a>
+                <?php if (!empty($selected_report_data)): ?>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Subject</th>
+                                    <th>Assessment 1 (%)</th>
+                                    <th>Assessment 2 (%)</th>
+                                    <th>End of Term Exam (%)</th>
+                                    <th>Exam Grade</th>
+                                    <th>Target Grade</th>
+                                    <th>On Target</th>
+                                    <th>Attitude (1-5)</th>
+                                    <th>Comments</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($selected_report_data as $row): ?>
+                                    <?php
+                                    $otg_display = '<span style="color: #999;">-</span>';
+                                    $final_grade_value = getGradeNumericValue($row['final_grade']);
+                                    $target_grade_value = getGradeNumericValue($row['target_grade']);
+
+                                    if (!is_null($final_grade_value) && !is_null($target_grade_value)) {
+                                        $otg_display = ($final_grade_value >= $target_grade_value) ? 
+                                            '<span class="icon-success">✔</span>' : 
+                                            '<span class="icon-danger">✖</span>';
+                                    }
+                                    ?>
+                                    <tr>
+                                        <td><?= htmlspecialchars($row['subject_name'] ?? 'Unknown Subject') ?></td>
+                                        <td><?= format_mark($row['assessment_1_mark']) ?></td>
+                                        <td><?= format_mark($row['assessment_2_mark']) ?></td>
+                                        <td><?= format_mark($row['exam_mark']) ?></td>
+                                        <td><?= htmlspecialchars($row['exam_grade'] ?? '-') ?></td>
+                                        <td><?= htmlspecialchars($row['target_grade'] ?? '-') ?></td>
+                                        <td><?= $otg_display ?></td>
+                                        <td><?= htmlspecialchars($row['attitude_to_learning'] ?? '-') ?></td>
+                                        <td class="comment-cell"><?= htmlspecialchars($row['comments'] ?? '') ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="key-section">
+                        <h4>Key Definitions</h4>
+                        <ul>
+                            <li><strong>Assessment 1/2:</strong> Coursework Assessment Mark</li>
+                            <li><strong>End of Term Exam:</strong> Final Exam Mark</li>
+                            <li><strong>Exam Grade:</strong> Grade for the End of Term Exam</li>
+                            <li><strong>Target Grade:</strong> Student's goal for the subject</li>
+                            <li><strong>On Target:</strong> <span class="icon-success">✔</span> Met / <span class="icon-danger">✖</span> Below Target</li>
+                            <li><strong>Attitude:</strong> Attitude to Learning (1-5)</li>
+                        </ul>
+                    </div>
+                <?php else: ?>
+                    <div class="message">
+                        <i class="fas fa-folder-open"></i>
+                        <p>No progress report data found for this period.</p>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+        <?php elseif (!empty($all_results_by_term)): ?>
+            <div class="content-header">
+                <h2>View Progress Report</h2>
+                <p>Select a report for <?= htmlspecialchars($student_name) ?></p>
+            </div>
+            <div class="content-body">
+                <p style="margin-bottom: 1.5rem;">Please select a report to view the detailed progress for <strong><?= htmlspecialchars($student_name) ?></strong>.</p>
+                <ul class="report-list">
+                    <?php foreach ($all_results_by_term as $key => $results):
+                        list($term, $year) = explode('|', $key);
+                    ?>
+                        <li class="report-list-item">
+                            <a href="parent_results.php?child=<?= $selectedChildIndex ?>&term=<?= urlencode($term) ?>&year=<?= urlencode($year) ?>">
+                                <span>
+                                    <i class="fas fa-file-alt" style="margin-right: 12px;"></i>
+                                    Progress Report: Term <?= htmlspecialchars($term) ?> - <?= htmlspecialchars($year) ?>
+                                </span>
+                                <span><i class="fas fa-chevron-right"></i></span>
+                            </a>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+        <?php else: ?>
+            <div class="content-header">
+                <h2>Progress Report</h2>
+                <p>Results for <?= htmlspecialchars($student_name) ?></p>
+            </div>
+            <div class="content-body">
+                <div class="message">
+                    <i class="fas fa-folder-open"></i>
+                    <p>No progress report data has been published for <?= htmlspecialchars($student_name) ?> yet.</p>
+                </div>
+                
+                <!-- Debug information -->
+                <?php if (isset($_GET['debug'])): ?>
+                <div class="debug-info">
+                    <h4>Debug Information:</h4>
+                    <p><strong>User ID:</strong> <?= $user_id ?></p>
+                    <p><strong>Selected Student ID:</strong> <?= $student_id ?></p>
+                    <p><strong>Student Name:</strong> <?= $student_name ?></p>
+                    <p><strong>Fees Cleared:</strong> <?= $fees_cleared ? 'Yes' : 'No' ?></p>
+                    <p><strong>Children Found:</strong> <?= count($children) ?></p>
+                    <p><strong>Results Found:</strong> <?= count($all_results_by_term) ?></p>
+                </div>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+    </div>
+
 <?php
+// Include footer
+include 'footer.php';
+
 if (isset($conn)) $conn->close();
 ?>

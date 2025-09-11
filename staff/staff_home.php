@@ -918,8 +918,8 @@ $csrf_token = StaffSecurityHelper::generateCSRFToken();
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
             <div class="logo-container">
-                <img src="../images/logo.jpg" alt="Wisetech College Logo" onerror="this.style.display='none'">
-                <span class="logo-text">Wisetech College</span>
+                <img src="../images/logo.jpeg" alt="Solid Rock  Logo" onerror="this.style.display='none'">
+                <span class="logo-text">Solid Rock </span>
             </div>
 
             <div class="teacher-profile">
@@ -955,10 +955,6 @@ $csrf_token = StaffSecurityHelper::generateCSRFToken();
                         <i class="fas fa-check-to-slot" aria-hidden="true"></i>
                         <span class="quick-action-text">Review Work</span>
                     </a>
-                    <a href="staff_assistant.php" class="quick-action-item">
-                        <i class="fas fa-robot" aria-hidden="true"></i>
-                        <span class="quick-action-text">AI Assistant</span>
-                    </a>
                 </div>
             </div>
 
@@ -989,19 +985,13 @@ $csrf_token = StaffSecurityHelper::generateCSRFToken();
                         </a>
                     </li>
                     <li class="nav-item" role="none">
-                        <a href="staff_view_subjects.php" class="nav-link" role="menuitem">
-                            <i class="fas fa-book nav-icon" aria-hidden="true"></i>
-                            <span>My Subjects</span>
-                        </a>
-                    </li>
-                    <li class="nav-item" role="none">
                         <a href="post_assignments.php" class="nav-link" role="menuitem">
                             <i class="fas fa-plus-circle nav-icon" aria-hidden="true"></i>
                             <span>Post Assignments</span>
                         </a>
                     </li>
                     <li class="nav-item" role="none">
-                        <a href="view_my_assignments.php" class="nav-link" role="menuitem">
+                        <a href="review_assignments.php" class="nav-link" role="menuitem">
                             <i class="fas fa-inbox nav-icon" aria-hidden="true"></i>
                             <span>View Assignments</span>
                             <span class="badge-menu <?= $stats['pending_submissions_count'] > 0 ? 'show' : '' ?>" id="badge-assignments">
@@ -1013,12 +1003,6 @@ $csrf_token = StaffSecurityHelper::generateCSRFToken();
                         <a href="assign_class_subject.php" class="nav-link" role="menuitem">
                             <i class="fas fa-chalkboard-teacher nav-icon" aria-hidden="true"></i>
                             <span>Assign Subject/Class</span>
-                        </a>
-                    </li>
-                    <li class="nav-item" role="none">
-                        <a href="staff_database.php" class="nav-link" role="menuitem">
-                            <i class="fas fa-users nav-icon" aria-hidden="true"></i>
-                            <span>Staff Database</span>
                         </a>
                     </li>
                     <li class="nav-item" role="none">
@@ -1053,12 +1037,6 @@ $csrf_token = StaffSecurityHelper::generateCSRFToken();
                             <span>Results History</span>
                         </a>
                     </li>
-                    <li class="nav-item" role="none">
-                        <a href="staff_assistant.php" class="nav-link" role="menuitem">
-                            <i class="fas fa-robot nav-icon" aria-hidden="true"></i>
-                            <span>AI Report Assistant</span>
-                        </a>
-                    </li>
                 </ul>
             </nav>
         </aside>
@@ -1087,18 +1065,8 @@ $csrf_token = StaffSecurityHelper::generateCSRFToken();
             <section class="dashboard">
                 <div class="welcome-message">
                     <h1>Welcome back, <?= StaffSecurityHelper::sanitizeOutput($staff_details['username']) ?>!</h1>
-                    <p>Here's what's happening at Wisetech College today.</p>
+                    <p>Here's what's happening at Solid Rock today.</p>
                 </div>
-
-                <!-- Debug information (remove in production) -->
-                <?php if (isset($_GET['debug']) && $_GET['debug'] === '1'): ?>
-                <div class="debug-info">
-                    <h3>Debug Information:</h3>
-                    <pre><?= json_encode($debug_info, JSON_PRETTY_PRINT) ?></pre>
-                    <p>Teacher ID: <?= $staff_id ?></p>
-                    <p>Stats: <?= json_encode($stats) ?></p>
-                </div>
-                <?php endif; ?>
 
                 <!-- Dynamic notifications area -->
                 <div id="dynamic-notification" class="alert alert-info" style="display:none;" role="alert">

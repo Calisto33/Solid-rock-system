@@ -31,19 +31,55 @@ if (!$student) {
     die("Student not found.");
 }
 
-// Define class options (Form 1 to Form 6)
-$class_options = [
-    'Form 1' => 'Form 1',
-    'Form 2' => 'Form 2',
-    'Form 3' => 'Form 3',
-    'Form 4' => 'Form 4',
-    'Form 5' => 'Form 5',
-    'Form 6' => 'Form 6'
-];
+// Define your complete school class structure
+function generateClassOptions($selectedClass = '') {
+    $schoolStructure = [
+        'Primary School' => [
+            'ECD' => ['ECD A', 'ECD B'],
+            'Grades' => ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7']
+        ],
+        'Secondary School' => [
+            'Forms' => ['Form 1', 'Form 2', 'Form 3', 'Form 4', 'Form 5', 'Form 6']
+        ]
+    ];
+    
+    $streams = ['Gold', 'Silver', 'Platinum', 'Bronze', 'Diamond'];
+    $html = '';
+    
+    // Add default option
+    $selected = ($selectedClass === '' || $selectedClass === 'Unassigned') ? 'selected' : '';
+    $html .= "<option value='Unassigned' {$selected}>-- Select Class --</option>\n";
+    
+    // Generate options for each school level
+    foreach ($schoolStructure as $schoolLevel => $categories) {
+        $html .= "<optgroup label='{$schoolLevel}'>\n";
+        
+        foreach ($categories as $categoryName => $grades) {
+            foreach ($grades as $grade) {
+                foreach ($streams as $stream) {
+                    $classValue = "{$grade} {$stream}";
+                    $selected = ($selectedClass === $classValue) ? 'selected' : '';
+                    $html .= "    <option value='{$classValue}' {$selected}>{$classValue}</option>\n";
+                }
+            }
+        }
+        
+        $html .= "</optgroup>\n";
+    }
+    
+    return $html;
+}
 
-// Define basic subject combinations
+// Define enhanced subject combinations for your school structure
 $course_combinations = [
-    // Main Category Streams
+    // Primary Level Subjects (for ECD and Lower Grades)
+    'primary_subjects' => [
+        'General Studies' => 'General Studies',
+        'English, Mathematics, Science' => 'English, Mathematics, Science',
+        'Basic Education' => 'Basic Education',
+    ],
+    
+    // Main Category Streams (for Forms 1-6)
     'main_streams' => [
         'Sciences' => 'Sciences',
         'Commercials' => 'Commercials',
@@ -51,42 +87,54 @@ $course_combinations = [
         'Arts' => 'Arts',
     ],
     
-    // Basic Science Combinations
+    // Detailed Science Combinations
     'sciences' => [
         'Physics, Chemistry, Mathematics' => 'Physics, Chemistry, Mathematics (PCM)',
         'Physics, Chemistry, Biology' => 'Physics, Chemistry, Biology (PCB)',
         'Biology, Chemistry, Mathematics' => 'Biology, Chemistry, Mathematics (BCM)',
         'Physics, Biology, Mathematics' => 'Physics, Biology, Mathematics (PBM)',
         'Computer Science, Mathematics, Physics' => 'Computer Science, Mathematics, Physics (CMP)',
+        'Mathematics, Physics, Geography' => 'Mathematics, Physics, Geography (MPG)',
     ],
     
-    // Basic Commercial Combinations
+    // Commercial Combinations
     'commercials' => [
         'Accounting, Business Studies, Economics' => 'Accounting, Business Studies, Economics (ABE)',
         'Accounting, Business Studies, Mathematics' => 'Accounting, Business Studies, Mathematics (ABM)',
         'Business Studies, Economics, Mathematics' => 'Business Studies, Economics, Mathematics (BEM)',
         'Accounting, Economics, Mathematics' => 'Accounting, Economics, Mathematics (AEM)',
+        'Accounting, Business Studies, Geography' => 'Accounting, Business Studies, Geography (ABG)',
     ],
     
-    // Basic Humanities Combinations
+    // Humanities Combinations
     'humanities' => [
         'History, Geography, Literature' => 'History, Geography, Literature (HGL)',
         'History, Geography, Divinity' => 'History, Geography, Divinity (HGD)',
         'Literature, Divinity, History' => 'Literature, Divinity, History (LDH)',
         'Geography, Literature, Economics' => 'Geography, Literature, Economics (GLE)',
+        'History, Literature, Shona' => 'History, Literature, Shona (HLS)',
     ],
     
-    // Basic Arts Combinations
+    // Arts Combinations
     'arts' => [
         'English, French, Literature' => 'English, French, Literature (EFL)',
         'English, Shona, Literature' => 'English, Shona, Literature (ESL)',
         'Art, Design, Literature' => 'Art, Design, Literature (ADL)',
         'Music, Literature, History' => 'Music, Literature, History (MLH)',
+        'Fashion & Fabrics, Art, English' => 'Fashion & Fabrics, Art, English (FAE)',
     ],
     
-    // Other
+    // Mixed/Other Combinations
+    'mixed_combinations' => [
+        'Mathematics, Geography, History' => 'Mathematics, Geography, History (MGH)',
+        'English, Mathematics, Geography' => 'English, Mathematics, Geography (EMG)',
+        'Science, Geography, Mathematics' => 'Science, Geography, Mathematics (SGM)',
+    ],
+    
+    // Other/Unassigned
     'other' => [
-        'Other' => 'Other'
+        'Other' => 'Other',
+        'Unassigned' => 'Unassigned'
     ]
 ];
 
@@ -216,9 +264,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
 
         .container {
-            max-width: 800px;
-            width: 90%;
-            margin: 2.5rem auto;
+            max-width: 900px;
+            width: 95%;
+            margin: 2rem auto;
             background: var(--white);
             border-radius: var(--border-radius);
             box-shadow: var(--card-shadow);
@@ -297,6 +345,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             background-repeat: no-repeat;
             background-size: 1.5em 1.5em;
             padding-right: 2.5rem;
+        }
+
+        /* Enhanced optgroup styling */
+        optgroup {
+            font-weight: bold;
+            color: var(--primary-color);
+            background-color: var(--off-white);
+            padding: 5px 0;
+        }
+
+        optgroup option {
+            font-weight: normal;
+            color: var(--text-color);
+            padding-left: 20px;
         }
 
         .btn {
@@ -389,6 +451,45 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             font-size: 0.9rem;
         }
 
+        .class-preview {
+            background: #f0f8ff;
+            border: 2px solid var(--primary-light);
+            border-radius: var(--input-radius);
+            padding: 1rem;
+            margin-top: 0.5rem;
+            display: none;
+        }
+
+        .class-preview.show {
+            display: block;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .class-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+            color: white;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+
+        .stream-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-left: 5px;
+        }
+
+        .stream-gold { background: #ffd700; }
+        .stream-silver { background: #c0c0c0; }
+        .stream-platinum { background: #4a90e2; }
+        .stream-bronze { background: #cd7f32; }
+        .stream-diamond { background: #b9f2ff; }
+
         /* Utilities */
         .text-center { text-align: center; }
         .mb-0 { margin-bottom: 0; }
@@ -396,7 +497,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         /* Animation */
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
+            from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
@@ -429,14 +530,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 width: 100%;
                 justify-content: center;
             }
+
+            .container {
+                width: 98%;
+                margin: 1rem auto;
+            }
         }
     </style>
 </head>
 <body>
     <header class="header">
         <div class="header-left">
-            <img src="../images/logo.jpg" alt=" Solid Rock Logo" class="header-logo">
-            <h1>Solid Rock Portal</h1>
+            <img src="../images/logo.jpeg" alt="Solid Rock   Logo" class="header-logo">
+            <h1>Solid Rock  Portal</h1>
         </div>
         <div class="header-nav">
             <a href="super_admin_dashboard.php" class="btn btn-secondary">
@@ -464,6 +570,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <h3><i class="fas fa-id-card"></i> Student Information</h3>
                 <p><strong>Student ID:</strong> <?= htmlspecialchars($student['student_id']) ?></p>
                 <p><strong>Current Username:</strong> <?= htmlspecialchars($student['username']) ?></p>
+                <p><strong>Current Class:</strong> <?= htmlspecialchars($student['class'] ?: 'Unassigned') ?></p>
                 <?php if (!$student['user_id']): ?>
                     <div class="warning-box">
                         <i class="fas fa-exclamation-triangle"></i> <strong>Warning:</strong> This student doesn't have an associated user account. Email and password fields will not be saved.
@@ -472,7 +579,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             </div>
 
             <div class="info-box">
-                <i class="fas fa-info-circle"></i> <strong>Note:</strong> Select the appropriate class (Form 1-6) and subject combination. The combinations are organized by category (Sciences, Commerce, Arts, etc.) for easy selection.
+                <i class="fas fa-info-circle"></i> <strong>School Structure:</strong> 
+                <br><strong>Primary:</strong> ECD A/B, Grades 1-7 (each with Gold, Silver, Platinum, Bronze, Diamond streams)
+                <br><strong>Secondary:</strong> Forms 1-6 (each with Gold, Silver, Platinum, Bronze, Diamond streams)
+                <br>Select the appropriate class and subject combination for the student.
             </div>
 
             <form method="POST">
@@ -509,14 +619,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         <label for="class">
                             <i class="fas fa-chalkboard"></i> Class
                         </label>
-                        <select id="class" name="class" required>
-                            <option value="">Select Class</option>
-                            <?php foreach ($class_options as $value => $label): ?>
-                                <option value="<?= htmlspecialchars($value) ?>" <?= ($student['class'] === $value) ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($label) ?>
-                                </option>
-                            <?php endforeach; ?>
+                        <select id="class" name="class" required onchange="showClassPreview()">
+                            <?= generateClassOptions($student['class'] ?? '') ?>
                         </select>
+                        <div id="classPreview" class="class-preview">
+                            <!-- Class preview will be shown here -->
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -526,7 +634,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         <select id="course" name="course" required>
                             <option value="">Select Subject Combination</option>
                             
-                            <optgroup label="Main Streams">
+                            <optgroup label="📚 Primary Level Subjects">
+                                <?php foreach ($course_combinations['primary_subjects'] as $value => $label): ?>
+                                    <option value="<?= htmlspecialchars($value) ?>" <?= ($student['course'] === $value) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($label) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </optgroup>
+                            
+                            <optgroup label=" Main Academic Streams">
                                 <?php foreach ($course_combinations['main_streams'] as $value => $label): ?>
                                     <option value="<?= htmlspecialchars($value) ?>" <?= ($student['course'] === $value) ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($label) ?>
@@ -534,7 +650,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 <?php endforeach; ?>
                             </optgroup>
                             
-                            <optgroup label="Sciences">
+                            <optgroup label=" Science Combinations">
                                 <?php foreach ($course_combinations['sciences'] as $value => $label): ?>
                                     <option value="<?= htmlspecialchars($value) ?>" <?= ($student['course'] === $value) ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($label) ?>
@@ -542,7 +658,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 <?php endforeach; ?>
                             </optgroup>
                             
-                            <optgroup label="Commercials">
+                            <optgroup label=" Commercial Combinations">
                                 <?php foreach ($course_combinations['commercials'] as $value => $label): ?>
                                     <option value="<?= htmlspecialchars($value) ?>" <?= ($student['course'] === $value) ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($label) ?>
@@ -550,7 +666,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 <?php endforeach; ?>
                             </optgroup>
                             
-                            <optgroup label="Humanities">
+                            <optgroup label=" Humanities Combinations">
                                 <?php foreach ($course_combinations['humanities'] as $value => $label): ?>
                                     <option value="<?= htmlspecialchars($value) ?>" <?= ($student['course'] === $value) ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($label) ?>
@@ -558,7 +674,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 <?php endforeach; ?>
                             </optgroup>
                             
-                            <optgroup label="Arts">
+                            <optgroup label=" Arts Combinations">
                                 <?php foreach ($course_combinations['arts'] as $value => $label): ?>
                                     <option value="<?= htmlspecialchars($value) ?>" <?= ($student['course'] === $value) ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($label) ?>
@@ -566,7 +682,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 <?php endforeach; ?>
                             </optgroup>
                             
-                            <optgroup label="Other">
+                            <optgroup label=" Mixed Combinations">
+                                <?php foreach ($course_combinations['mixed_combinations'] as $value => $label): ?>
+                                    <option value="<?= htmlspecialchars($value) ?>" <?= ($student['course'] === $value) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($label) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </optgroup>
+                            
+                            <optgroup label="❓ Other">
                                 <?php foreach ($course_combinations['other'] as $value => $label): ?>
                                     <option value="<?= htmlspecialchars($value) ?>" <?= ($student['course'] === $value) ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($label) ?>
@@ -578,9 +702,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
                     <div class="form-group">
                         <label for="year">
-                            <i class="fas fa-calendar-alt"></i> Year
+                            <i class="fas fa-calendar-alt"></i> Academic Year
                         </label>
-                        <input type="number" id="year" name="year" value="<?= htmlspecialchars($student['year'] ?? '') ?>" min="2020" max="2030" required>
+                        <input type="number" id="year" name="year" value="<?= htmlspecialchars($student['year'] ?? date('Y')) ?>" min="2020" max="2030" required>
                     </div>
 
                     <div class="form-group">
@@ -602,5 +726,126 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             </form>
         </div>
     </div>
+
+    <script>
+        function showClassPreview() {
+            const classSelect = document.getElementById('class');
+            const preview = document.getElementById('classPreview');
+            const selectedClass = classSelect.value;
+
+            if (selectedClass && selectedClass !== 'Unassigned') {
+                let level = '';
+                let type = '';
+                let stream = '';
+                let streamClass = '';
+
+                // Determine level and type
+                if (selectedClass.includes('ECD')) {
+                    level = 'Early Childhood Development';
+                    type = 'Primary School';
+                } else if (selectedClass.includes('Grade')) {
+                    level = 'Primary Education';
+                    type = 'Primary School';
+                } else if (selectedClass.includes('Form')) {
+                    level = 'Secondary Education';
+                    type = 'Secondary School';
+                    
+                    const formNumber = selectedClass.match(/Form (\d+)/);
+                    if (formNumber) {
+                        const num = parseInt(formNumber[1]);
+                        if (num <= 2) type = 'Lower Secondary';
+                        else if (num <= 4) type = 'O-Level';
+                        else type = 'A-Level';
+                    }
+                }
+
+                // Determine stream
+                const streams = ['Gold', 'Silver', 'Platinum', 'Bronze', 'Diamond'];
+                for (let s of streams) {
+                    if (selectedClass.includes(s)) {
+                        stream = s;
+                        streamClass = `stream-${s.toLowerCase()}`;
+                        break;
+                    }
+                }
+
+                preview.innerHTML = `
+                    <h4><i class="fas fa-info-circle"></i> Class Information</h4>
+                    <p><strong>Selected Class:</strong> <span class="class-badge">${selectedClass}</span> 
+                    ${stream ? `<span class="stream-indicator ${streamClass}" title="${stream} Stream"></span>` : ''}</p>
+                    <p><strong>Education Level:</strong> ${level}</p>
+                    <p><strong>School Type:</strong> ${type}</p>
+                    ${stream ? `<p><strong>Stream:</strong> ${stream}</p>` : ''}
+                `;
+                preview.classList.add('show');
+            } else {
+                preview.classList.remove('show');
+            }
+        }
+
+        // Show preview on page load if class is already selected
+        document.addEventListener('DOMContentLoaded', function() {
+            showClassPreview();
+        });
+
+        // Auto-suggest course combinations based on class level
+        document.getElementById('class').addEventListener('change', function() {
+            const selectedClass = this.value;
+            const courseSelect = document.getElementById('course');
+            
+            // Auto-select appropriate course category based on class
+            if (selectedClass.includes('ECD') || selectedClass.includes('Grade')) {
+                // For primary classes, suggest primary subjects
+                const primaryOptions = courseSelect.querySelectorAll('optgroup[label*="Primary"] option');
+                if (primaryOptions.length > 0 && courseSelect.value === '') {
+                    courseSelect.value = 'General Studies';
+                }
+            } else if (selectedClass.includes('Form')) {
+                // For secondary classes, suggest main streams
+                if (courseSelect.value === '' || courseSelect.value === 'General Studies') {
+                    courseSelect.value = '';
+                    // Don't auto-select for secondary as there are many options
+                }
+            }
+        });
+
+        // Form validation
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const requiredFields = ['username', 'first_name', 'last_name', 'class', 'course', 'year'];
+            let isValid = true;
+            
+            requiredFields.forEach(fieldName => {
+                const field = document.querySelector(`[name="${fieldName}"]`);
+                if (!field.value.trim()) {
+                    field.style.borderColor = '#f44336';
+                    isValid = false;
+                } else {
+                    field.style.borderColor = '#e9ecef';
+                }
+            });
+            
+            if (!isValid) {
+                e.preventDefault();
+                alert('Please fill in all required fields.');
+            }
+        });
+
+        // Real-time validation feedback
+        document.querySelectorAll('input[required], select[required]').forEach(field => {
+            field.addEventListener('blur', function() {
+                if (this.value.trim()) {
+                    this.style.borderColor = '#28a745';
+                } else {
+                    this.style.borderColor = '#f44336';
+                }
+            });
+            
+            field.addEventListener('input', function() {
+                if (this.style.borderColor === 'rgb(244, 67, 54)' && this.value.trim()) {
+                    this.style.borderColor = '#e9ecef';
+                }
+            });
+        });
+    </script>
 </body>
 </html>

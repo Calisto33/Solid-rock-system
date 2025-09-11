@@ -22,9 +22,6 @@ include 'sa_header.php';
 
 <div class="content-header">
     <h1 class="title"><?= htmlspecialchars($pageTitle); ?></h1>
-    <a href="add_admin_form.php" class="btn btn-primary">
-        <i class="fas fa-plus"></i> Add New Admin
-    </a>
 </div>
 
 <?php if (isset($fetch_error)): ?>
@@ -66,8 +63,6 @@ include 'sa_header.php';
                                     <a href="edit_admin.php?admin_id=<?= $admin['id'] ?>" class="btn-icon btn-edit" title="Edit">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    <a href="delete_admin.php?admin_id=<?= $admin['id'] ?>" class="btn-icon btn-delete" title="Delete" onclick="return confirm('Are you sure you want to delete this admin?');">
-                                        <i class="fas fa-trash"></i>
                                     </a>
                                 </div>
                             </td>

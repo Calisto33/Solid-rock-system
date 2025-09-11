@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Parent | Solid Rock</title>
+    <title>Edit Parent | Solid Rock  </title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -370,7 +370,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
     <header class="header">
         <div class="header-left">
-            <img src="../images/logo.jpeg" alt="Solid Rock Logo" class="header-logo">
+            <img src="../images/logo.jpeg" alt="Solid Rock  Rock " class="header-logo">
             <h1 class="header-title">Edit Parent Profile</h1>
         </div>
         <div class="header-right">
@@ -441,7 +441,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <footer class="footer">
         <div class="footer-content">
-            <img src="../images/logo.jpeg" alt="Solid Rock Logo" class="footer-logo">
+            <img src="../images/logo.jpeg" alt="Solid Rock  Logo" class="footer-logo">
             <p class="footer-text">&copy; <?php echo date("Y"); ?> Mirilax-Scales Portal. All rights reserved.</p>
         </div>
     </footer>

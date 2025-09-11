@@ -13,7 +13,6 @@ if (!isset($conn) || !$conn) {
     die("Database connection failed. Please check your config.php file.");
 }
 
-
 $successMessage = null;
 $errorMessage = null;
 
@@ -36,11 +35,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $fileName = basename($_FILES['attachment']['name']);
         $targetFilePath = $targetDir . $fileName;
         
-        // Ensure unique filename if needed, or handle overwrites
         // For now, use basename and move
-        if(move_uploaded_file($_FILES['attachment']['tmp_name'], $targetFilePath)){
+        if (move_uploaded_file($_FILES['attachment']['tmp_name'], $targetFilePath)) {
             $attachment_link = $targetFilePath;
-        } else{
+        } else {
             $errorMessage = "Sorry, there was an error uploading your file.";
         }
     }
@@ -48,12 +46,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Only proceed if no upload error or no file uploaded
     if (!$errorMessage) {
         // Insert event into the database
-        $stmt = $conn->prepare("INSERT INTO events (title, description, attachment_type, attachment_link, target_audience, created_by) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt = $conn->prepare("INSERT INTO events (title, description, attachment_type, attachment_link, target_audience) VALUES (?, ?, ?, ?, ?)");
         // Check if prepare() failed
         if ($stmt === false) {
             $errorMessage = "Error preparing statement: " . $conn->error;
         } else {
-            $stmt->bind_param("sssssi", $title, $description, $attachment_type, $attachment_link, $target_audience, $created_by);
+            $stmt->bind_param("sssss", $title, $description, $attachment_type, $attachment_link, $target_audience);
 
             if ($stmt->execute()) {
                 $successMessage = "Event added successfully!";
@@ -72,32 +70,27 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Add Events</title>
+    <title>Admin Add Events | Wisetech</title>
+    <link rel="icon" type="image/jpeg" href="../images/logo.jpeg">
+    <link rel="shortcut icon" type="image/jpeg" href="../images/logo.jpeg">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --primary-color: #4361ee;
-            --primary-hover: #3a56d4;
-            --primary-light: rgba(67, 97, 238, 0.1);
-            --secondary-color: #3f37c9;
-            --accent-color: #f72585;
-            --success-color: #4cc9f0; /* Changed for better contrast */
-            --success-bg: rgba(76, 201, 240, 0.1);
-            --warning-color: #f8961e;
-            --danger-color: #f94144;
-            --danger-bg: rgba(249, 65, 68, 0.1);
-            --text-color: #2b2d42;
-            --text-light: #6c757d;
-            --text-muted: #9CA3AF;
-            --bg-color: #f8f9fa;
-            --card-bg: #ffffff;
-            --border-radius-sm: 6px;
+            --primary-color: #4A90E2;
+            --primary-dark: #3771C8;
+            --background-color: #F8F9FA;
+            --card-background: #FFFFFF;
+            --text-color: #333333;
+            --text-light: #666666;
+            --border-color: #E0E0E0;
+            --shadow-light: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --transition: all 0.3s ease;
             --border-radius: 12px;
-            --border-radius-lg: 16px;
-            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
-            --shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
-            --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.1);
-            --transition: all 0.2s ease;
+            --success-bg: #EAF7E8;
+            --success-text: #4CAF50;
+            --error-bg: #F8E8E8;
+            --error-text: #F44336;
         }
 
         * {
@@ -107,36 +100,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
 
         body {
-            font-family: 'Inter', 'Segoe UI', Roboto, -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-color);
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--background-color);
             color: var(--text-color);
             line-height: 1.6;
+            display: flex;
+            flex-direction: column;
             min-height: 100vh;
-            display: flex; /* Kept for potential future use, but not strictly needed now */
-            flex-direction: column; /* Changed to column */
-        }
-
-        /* Main Content - No more sidebar margin */
-        .main-content {
-            flex: 1;
-            transition: var(--transition);
-            width: 100%; /* Ensure it takes full width */
-            padding-top: 70px; /* Add padding to prevent header overlap */
         }
 
         .header {
-            background-color: var(--card-bg);
-            box-shadow: var(--shadow-sm);
-            padding: 1rem 2rem;
+            background-color: var(--card-background);
+            padding: 1.5rem 2.5rem;
+            box-shadow: var(--shadow-light);
             display: flex;
-            align-items: center;
             justify-content: space-between;
-            position: fixed; /* Fixed header */
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 999; /* Ensure it's above content */
-            height: 70px; /* Fixed height for padding calculation */
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1.5rem;
         }
 
         .header-left {
@@ -144,482 +125,312 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             align-items: center;
             gap: 1rem;
         }
-        
+
         .logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            text-decoration: none;
+            height: 40px; /* Adjust as needed */
+            width: auto;
         }
 
-        .logo-icon {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            width: 40px;
-            height: 40px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-            box-shadow: 0 4px 10px rgba(67, 97, 238, 0.3);
-        }
-
-        .logo-text {
-            color: var(--text-color);
+        .header h2 {
+            font-size: 1.5rem;
             font-weight: 700;
-            font-size: 1.2rem;
+            margin: 0;
         }
 
-
-        .page-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-        }
-
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .header-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-color);
-            background-color: var(--bg-color);
-            position: relative;
-            transition: var(--transition);
-            cursor: pointer;
-        }
-
-        .header-icon:hover {
-            background-color: var(--primary-light);
+        .nav-link {
+            padding: 0.75rem 1.5rem;
+            border: 1px solid var(--primary-color);
             color: var(--primary-color);
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: var(--transition);
         }
 
-        .notification-badge {
-            position: absolute;
-            top: -2px;
-            right: -2px;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            background-color: var(--accent-color);
-            color: white;
-            font-size: 0.6rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
+        .nav-link:hover {
+            background-color: var(--primary-color);
+            color: var(--card-background);
         }
 
         .container {
-            padding: 2rem;
-            max-width: 900px; /* Reduced width for better focus */
-            margin: 0 auto;
-        }
-
-        .page-header {
-            margin-bottom: 1.5rem;
-        }
-
-        .page-title-wrapper {
-            margin-bottom: 0.5rem;
-        }
-
-        .breadcrumb {
+            flex-grow: 1;
             display: flex;
+            justify-content: center;
             align-items: center;
-            gap: 8px;
-            color: var(--text-light);
-            font-size: 0.875rem;
+            padding: 2rem;
         }
 
-        .breadcrumb i {
-            font-size: 0.7rem;
-        }
-
-        .breadcrumb a {
-            color: var(--text-light);
-            text-decoration: none;
-            transition: var(--transition);
-        }
-
-        .breadcrumb a:hover {
-            color: var(--primary-color);
-        }
-
-        /* Card */
         .card {
-            background: var(--card-bg);
+            background-color: var(--card-background);
             border-radius: var(--border-radius);
-            box-shadow: var(--shadow);
-            margin-bottom: 2rem;
-            overflow: hidden;
+            box-shadow: var(--shadow-light);
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 700px;
+            text-align: center;
             transition: var(--transition);
         }
 
         .card:hover {
-            box-shadow: var(--shadow-lg);
-            transform: translateY(-3px);
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
         }
 
-        .card-header {
-            padding: 1.5rem;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .card h3 {
+            font-size: 1.75rem;
+            color: var(--primary-dark);
+            margin-bottom: 2rem;
+            position: relative;
         }
 
-        .card-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: var(--text-color);
-            margin: 0;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+        .card h3::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            bottom: -10px;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 4px;
+            background-color: var(--primary-color);
+            border-radius: 2px;
         }
-
-        .card-title i {
-            color: var(--primary-color);
-            font-size: 1rem;
-        }
-
-        .card-body {
-            padding: 1.5rem;
-        }
-
-        /* Messages */
+        
         .message {
             padding: 1rem;
-            border-radius: var(--border-radius);
             margin-bottom: 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 1rem;
+            text-align: left;
         }
-
+        
         .message.success {
             background-color: var(--success-bg);
-            border-left: 4px solid var(--success-color);
-            color: var(--text-color);
+            color: var(--success-text);
         }
-
+        
         .message.error {
-            background-color: var(--danger-bg);
-            border-left: 4px solid var(--danger-color);
-            color: var(--text-color);
+            background-color: var(--error-bg);
+            color: var(--error-text);
         }
-
-        .message i {
-            font-size: 1.25rem;
-        }
-
-        .message.success i {
-            color: var(--success-color);
-        }
-
-        .message.error i {
-            color: var(--danger-color);
-        }
-
-        /* Form elements */
+        
         .form-group {
-            margin-bottom: 1.5rem;
+            text-align: left;
+            margin-bottom: 2rem;
         }
 
-        .form-label {
+        label {
             display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-            color: var(--text-color);
+            font-weight: 600;
+            margin-bottom: 0.75rem;
         }
 
         .form-control {
-            display: block;
             width: 100%;
-            padding: 0.75rem 1rem;
+            padding: 0.8rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
             font-size: 1rem;
-            font-weight: 400;
-            line-height: 1.5;
-            color: var(--text-color);
-            background-color: var(--card-bg);
-            background-clip: padding-box;
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            border-radius: var(--border-radius);
-            transition: var(--transition);
-        }
-
-        .form-control:focus {
-            border-color: var(--primary-color);
-            outline: 0;
-            box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.25);
+            background-color: var(--background-color);
+            transition: border-color 0.3s, box-shadow 0.3s;
+            font-family: 'Poppins', sans-serif;
         }
 
         textarea.form-control {
+            min-height: 150px;
             resize: vertical;
-            min-height: 120px; /* Increased height */
         }
 
-        .form-select-wrapper {
-            position: relative;
-        }
-
-        .form-select {
-            display: block;
-            width: 100%;
-            padding: 0.75rem 1rem;
-            font-size: 1rem;
-            font-weight: 400;
-            line-height: 1.5;
-            color: var(--text-color);
-            background-color: var(--card-bg);
-            background-clip: padding-box;
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            border-radius: var(--border-radius);
-            transition: var(--transition);
+        select.form-control {
             -webkit-appearance: none;
             -moz-appearance: none;
             appearance: none;
-        }
-
-        .form-select:focus {
-            border-color: var(--primary-color);
-            outline: 0;
-            box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.25);
-        }
-
-        .select-arrow {
-            position: absolute;
-            top: 50%;
-            right: 1rem;
-            transform: translateY(-50%);
-            color: var(--text-light);
-            pointer-events: none;
-        }
-
-        .file-input-wrapper {
-            position: relative;
+            cursor: pointer;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23666666'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1rem;
         }
         
-        .form-control[type="file"] {
-            padding: 0.55rem 1rem; /* Adjust padding for file input */
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+            background-color: var(--card-background);
         }
 
-        .form-control[type="file"]::file-selector-button {
-            padding: 0.55rem 1rem;
-            margin: -0.55rem -1rem;
+        .form-file-input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--background-color);
+            font-family: 'Poppins', sans-serif;
+            color: var(--text-light);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .form-file-input::-webkit-file-upload-button {
+            padding: 0.5rem 1rem;
             margin-right: 1rem;
             border: none;
-            background: var(--primary-light);
-            color: var(--primary-color);
-            font-weight: 500;
+            background: var(--primary-color);
+            color: white;
+            font-weight: 600;
+            border-radius: 6px;
             cursor: pointer;
             transition: var(--transition);
-            border-radius: var(--border-radius) 0 0 var(--border-radius);
         }
 
-        .form-control[type="file"]::file-selector-button:hover {
-             background: var(--primary-color);
-             color: white;
+        .form-file-input::-webkit-file-upload-button:hover {
+            background: var(--primary-dark);
         }
 
-
-        /* Buttons */
-        .btn {
-            display: inline-flex;
+        .submit-btn {
+            width: 100%;
+            padding: 1rem;
+            background-color: var(--primary-color);
+            color: var(--card-background);
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            font-weight: 500;
-            font-size: 0.875rem;
-            padding: 0.625rem 1.25rem;
-            border-radius: var(--border-radius);
-            border: none;
-            cursor: pointer;
-            transition: var(--transition);
-            text-decoration: none;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            gap: 0.5rem;
         }
 
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-        }
-
-        .btn-primary:hover {
-            box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+        .submit-btn:hover {
+            background-color: var(--primary-dark);
             transform: translateY(-2px);
         }
 
-        .btn-lg {
-            padding: 0.75rem 1.5rem;
-            font-size: 1rem;
-            width: 100%; /* Make button full width */
-            margin-top: 1rem; /* Add some space above */
+        .footer {
+            background-color: var(--card-background);
+            padding: 1.5rem;
+            text-align: center;
+            color: var(--text-light);
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+            margin-top: auto;
         }
-
-        /* Responsive */
-         @media (max-width: 768px) {
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
             .header {
-                padding: 1rem;
-                height: 60px; /* Adjust header height */
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 1.5rem;
             }
-             .main-content {
-                padding-top: 60px; /* Adjust padding */
-             }
-            .logo-text {
-                display: none; /* Hide text on smaller screens */
+            .header-left {
+                width: 100%;
+                justify-content: center;
+                margin-bottom: 1rem;
             }
-             .page-title {
-                 font-size: 1.1rem;
-             }
+            .header h2 {
+                font-size: 1.2rem;
+                text-align: center;
+            }
+            .nav-link {
+                width: 100%;
+                text-align: center;
+            }
             .container {
                 padding: 1rem;
             }
-            .card-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 1rem;
+            .card {
+                padding: 2rem 1.5rem;
             }
-        }
-
-        @media (max-width: 576px) {
-            .form-group {
-                margin-bottom: 1rem;
-            }
-            .header-actions .header-icon:not(:first-child) {
-                display: none; /* Hide extra icons on very small screens */
-            }
-            .page-title {
-                 display: none; /* Hide title on very small screens */
-             }
         }
     </style>
 </head>
 <body>
-    <main class="main-content">
-        <header class="header">
-            <div class="header-left">
-                <a href="#" class="logo">
-                    <div class="logo-icon">
-                        <i class="fas fa-graduation-cap"></i>
-                    </div>
-                    <span class="logo-text">Wisetech</span>
-                </a>
-                <h1 class="page-title">Add New Event</h1>
-            </div>
-               
-                 <div class="header-icon"> <i class="fas fa-user"></i>
-                </div>
-            </div>
-        </header>
-
-        <div class="container">
-            <div class="page-header">
-                <div class="page-title-wrapper">
-                    <div class="breadcrumb">
-                        <a href="admin_home.php">Dashboard</a>
-                        <i class="fas fa-chevron-right"></i>
-                        <a href="#">Events</a> <i class="fas fa-chevron-right"></i>
-                        <span>Add Event</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">
-                        <i class="fas fa-calendar-plus"></i>
-                        Create New Event
-                    </h2>
-                </div>
-                <div class="card-body">
-                    <?php if ($successMessage): ?>
-                        <div class="message success">
-                            <i class="fas fa-check-circle"></i>
-                            <?= htmlspecialchars($successMessage) ?>
-                        </div>
-                    <?php elseif ($errorMessage): ?>
-                        <div class="message error">
-                            <i class="fas fa-exclamation-circle"></i>
-                            <?= htmlspecialchars($errorMessage) ?>
-                        </div>
-                    <?php endif; ?>
-
-                    <form method="POST" enctype="multipart/form-data">
-                        <div class="form-group">
-                            <label for="title" class="form-label">Event Title</label>
-                            <input type="text" id="title" name="title" class="form-control" placeholder="Enter event title" required>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="description" class="form-label">Event Description</label>
-                            <textarea id="description" name="description" class="form-control" rows="5" placeholder="Describe the event details"></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="target_audience" class="form-label">Target Audience</label>
-                            <div class="form-select-wrapper">
-                                <select id="target_audience" name="target_audience" class="form-select" required>
-                                    <option value="" selected disabled>Select audience</option>
-                                    <option value="parent">Parent</option>
-                                    <option value="student">Student</option>
-                                    <option value="staff">Staff</option>
-                                    <option value="all">All</option>
-                                </select>
-                                <span class="select-arrow">
-                                    <i class="fas fa-chevron-down"></i>
-                                </span>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="attachment_type" class="form-label">Attachment Type</label>
-                            <div class="form-select-wrapper">
-                                <select id="attachment_type" name="attachment_type" class="form-select" required>
-                                    <option value="" selected disabled>Select type</option>
-                                    <option value="text">Text / Link Only</option>
-                                    <option value="pdf">PDF</option>
-                                    <option value="image">Image</option>
-                                    <option value="ppt">PowerPoint</option>
-                                    <option value="excel">Excel</option>
-                                    <option value="word">Word Document</option>
-                                </select>
-                                <span class="select-arrow">
-                                    <i class="fas fa-chevron-down"></i>
-                                </span>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="attachment" class="form-label">Upload File (Optional)</label>
-                            <div class="file-input-wrapper">
-                                <input type="file" id="attachment" name="attachment" class="form-control">
-                            </div>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary btn-lg">
-                            <i class="fas fa-plus-circle"></i>
-                            Add Event
-                        </button>
-                    </form>
-                </div>
-            </div>
+    <header class="header">
+        <div class="header-left">
+            <img src="../images/logo.jpeg" alt="Wisetech College Logo" class="logo">
+            <h2>Wisetech Admin Portal</h2>
         </div>
-    </main>
+        <a href="admin_home.php" class="nav-link">Dashboard</a>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            <h3>Add New Event</h3>
+            
+            <?php if ($successMessage): ?>
+                <div class="message success">
+                    <i class="fas fa-check-circle"></i>
+                    <?= htmlspecialchars($successMessage) ?>
+                </div>
+            <?php elseif ($errorMessage): ?>
+                <div class="message error">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <?= htmlspecialchars($errorMessage) ?>
+                </div>
+            <?php endif; ?>
+
+            <form method="POST" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="title" class="form-label">Event Title</label>
+                    <input type="text" id="title" name="title" class="form-control" placeholder="Enter event title" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="description" class="form-label">Event Description</label>
+                    <textarea id="description" name="description" class="form-control" rows="5" placeholder="Describe the event details"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="target_audience" class="form-label">Target Audience</label>
+                    <select id="target_audience" name="target_audience" class="form-control" required>
+                        <option value="" selected disabled>Select audience</option>
+                        <option value="parent">Parent</option>
+                        <option value="student">Student</option>
+                        <option value="staff">Staff</option>
+                        <option value="all">All</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="attachment_type" class="form-label">Attachment Type</label>
+                    <select id="attachment_type" name="attachment_type" class="form-control" required>
+                        <option value="" selected disabled>Select type</option>
+                        <option value="text">Text / Link Only</option>
+                        <option value="pdf">PDF</option>
+                        <option value="image">Image</option>
+                        <option value="ppt">PowerPoint</option>
+                        <option value="excel">Excel</option>
+                        <option value="word">Word Document</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="attachment" class="form-label">Upload File (Optional)</label>
+                    <input type="file" id="attachment" name="attachment" class="form-control form-file-input">
+                </div>
+
+                <button type="submit" class="submit-btn">
+                    <i class="fas fa-plus-circle"></i>
+                    Add Event
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; <?php echo date("Y"); ?> Wisetech College Portal | Admin System</p>
+    </footer>
+</body>
+</html>
+
 <?php
 // Close the database connection at the end
 if ($conn) {
     $conn->close();
 }
 ?>
-</body>
-</html>

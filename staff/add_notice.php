@@ -21,13 +21,11 @@ if (!$staffData) {
     die("Error: Staff member not found in the staff table.");
 }
 $specific_staff_id = $staffData['staff_id']; // Use this for notice queries
-
-// Fetch classes and subjects assigned to this staff member
 $assignedClassesQuery = "
-    SELECT ss.class, ts.subject_name, ss.subject_id
-    FROM staff_subject ss
+    SELECT ss.class_id AS class, ts.subject_name, ss.subject_id
+    FROM teacher_subjects ss
     JOIN table_subject ts ON ss.subject_id = ts.subject_id
-    WHERE ss.staff_id = ?";
+    WHERE ss.teacher_id = ?";
 $stmt_assigned = $conn->prepare($assignedClassesQuery);
 $stmt_assigned->bind_param("i", $specific_staff_id);
 $stmt_assigned->execute();

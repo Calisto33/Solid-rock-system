@@ -123,6 +123,9 @@ $conn->close();
     <title>Parent Feedback - Parent Portal</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Favicon -->
+    <link rel="icon" type="image/jpeg" href="../images/logo.jpeg">
+    <link rel="shortcut icon" type="image/jpeg" href="../images/logo.jpeg">
     <style>
         :root {
             --primary-color: #3b82f6;
@@ -423,7 +426,7 @@ $conn->close();
     <div class="dashboard-wrapper">
         <aside class="sidebar">
             <div class="sidebar-header">
-                <img src="../images/logo.jpg" alt="School Logo">
+                <img src="../images/logo.jpeg" alt="Solid Rock  Logo">
                 <h1>Parent Portal</h1>
             </div>
             <nav class="sidebar-nav">

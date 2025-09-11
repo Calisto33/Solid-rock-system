@@ -582,7 +582,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <body>
     <header class="header">
         <div class="logo-section">
-            <img src="../images/logo.jpg" alt="Solid Rock Logo" class="logo">
+            <img src="../images/logo.jpeg" alt="Solid Rock  Logo" class="logo">
             <h1>Edit Staff Profile</h1>
         </div>
         <div class="nav-buttons">
@@ -708,7 +708,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     <footer class="footer">
         <div class="footer-content">
-            <img src="../images/logo.jpg" alt="Solid Rock Logo">
+            <img src="../images/logo.jpeg" alt="Solid Rock  Logo">
             <p>&copy; <?php echo date("Y"); ?> Mirilax-Scales. All rights reserved.</p>
         </div>
     </footer>

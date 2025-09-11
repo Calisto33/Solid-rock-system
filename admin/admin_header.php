@@ -42,7 +42,7 @@ if (!empty($_SESSION['profile_image'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($page_title) ?> - Solid Rock Group of Schools</title>
+    <title><?= htmlspecialchars($page_title) ?> - Solid Rock </title>
     
     <!-- Favicon -->
     <link rel="icon" type="image/jpeg" href="../images/logo.jpeg">
@@ -55,7 +55,7 @@ if (!empty($_SESSION['profile_image'])) {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
-        /* Updated color scheme to match Solid Rock branding */
+        /* Updated color scheme to match Solid Rock  Rock branding */
         :root {
             --primary-bg: #f8fafc;
             --sidebar-bg: #FFFFFF;
@@ -483,7 +483,7 @@ if (!empty($_SESSION['profile_image'])) {
         <div class="sidebar-header">
             <div class="sidebar-logo">
                 <img src="../images/logo.jpeg" alt="Logo" onerror="this.onerror=null;this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzUiIGhlaWdodD0iMzUiIHZpZXdCb3g9IjAgMCAzNSAzNSIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjM1IiBoZWlnaHQ9IjM1IiByeD0iNiIgZmlsbD0iIzAwMzM2NiIvPgo8dGV4dCB4PSIxNy41IiB5PSIyMiIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPlM8L3RleHQ+Cjwvc3ZnPg==';">
-                Solid Rock
+                Solid Rock 
             </div>
         </div>
         
@@ -562,16 +562,12 @@ if (!empty($_SESSION['profile_image'])) {
                     </button>
                     
                     <div class="profile-menu" id="profileMenu">
-                        <a href="profile.php">
+                        <a href="#">
                             <i class="fas fa-user"></i>
                             My Profile
                         </a>
-                        <a href="settings.php">
-                            <i class="fas fa-cog"></i>
-                            Settings
-                        </a>
                         <?php if ($is_super_admin): ?>
-                        <a href="system_settings.php">
+                        <a href="#">
                             <i class="fas fa-server"></i>
                             System Settings
                         </a>

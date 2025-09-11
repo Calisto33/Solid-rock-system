@@ -16,7 +16,7 @@ $message_type = "";
 
 // Fetch all available classes for the dropdown
 $classes = [];
-$classQuery = "SELECT DISTINCT class FROM students WHERE student_id LIKE 'STU%' ORDER BY class";
+$classQuery = "SELECT DISTINCT class FROM students ORDER BY class";
 $classResult = $conn->query($classQuery);
 if ($classResult) {
     while ($row = $classResult->fetch_assoc()) {
@@ -82,15 +82,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_attendance'])) 
 // Fetch students for the selected class who have NOT been marked today
 $students = [];
 if ($selected_class) {
-    $query = "
-        SELECT s.student_id, s.username, s.first_name, s.last_name, s.class
-        FROM students s
-        WHERE s.class = ? AND s.student_id LIKE 'STU%' AND s.student_id NOT IN (
-            SELECT att.student_id FROM attendance att 
-            WHERE att.attendance_date = ? AND att.class = ? AND att.student_id IS NOT NULL
-        )
-        ORDER BY s.first_name, s.last_name
-    ";
+
+$query = "
+    SELECT s.student_id, s.username, s.first_name, s.last_name, s.class
+    FROM students s
+    WHERE s.class = ? AND s.student_id NOT IN (
+        SELECT att.student_id FROM attendance att 
+        WHERE att.attendance_date = ? AND att.class = ? AND att.student_id IS NOT NULL
+    )
+    ORDER BY s.first_name, s.last_name
+";
     $stmt = $conn->prepare($query);
     if ($stmt) {
         $stmt->bind_param("sss", $selected_class, $selected_date, $selected_class);

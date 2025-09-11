@@ -39,6 +39,9 @@ if ($stmt) {
     <title><?php echo isset($pageTitle) ? htmlspecialchars($pageTitle) : 'Staff Portal'; ?> - Wisetech College</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Favicon -->
+    <link rel="icon" type="image/jpeg" href="../images/logo.jpeg">
+    <link rel="shortcut icon" type="image/jpeg" href="../images/logo.jpeg">
     <style>
         :root {
             --primary-color: #2563eb;
@@ -626,8 +629,8 @@ if ($stmt) {
     <div class="layout-container">
         <aside class="sidebar" id="sidebar">
             <div class="logo-container">
-                <img src="../images/logo.jpg" alt="Wisetech College Logo">
-                <span class="logo-text">Wisetech College</span>
+                <img src="../images/logo.jpeg" alt="Solid Rock  Logo">
+                <span class="logo-text">Solid Rock  </span>
             </div>
             <div class="teacher-profile">
                 <div class="teacher-avatar"><i class="fas fa-user"></i></div>
@@ -658,11 +661,6 @@ if ($stmt) {
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="staff_view_subjects.php" class="nav-link <?= ($currentPage == 'staff_view_subjects.php') ? 'active' : '' ?>" data-tooltip="My Subjects">
-                            <i class="fas fa-book nav-icon"></i><span>My Subjects</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
                         <a href="post_assignments.php" class="nav-link <?= ($currentPage == 'post_assignments.php') ? 'active' : '' ?>" data-tooltip="Post Assignments">
                             <i class="fas fa-tasks nav-icon"></i><span>Post Assignments</span>
                         </a>
@@ -675,11 +673,6 @@ if ($stmt) {
                     <li class="nav-item">
                         <a href="assign_class_subject.php" class="nav-link <?= ($currentPage == 'assign_class_subject.php') ? 'active' : '' ?>" data-tooltip="Assign Subject/Class">
                             <i class="fas fa-chalkboard-teacher nav-icon"></i><span>Assign Subject/Class</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="staff_database.php" class="nav-link <?= ($currentPage == 'staff_database.php') ? 'active' : '' ?>" data-tooltip="Staff Database">
-                            <i class="fas fa-users nav-icon"></i><span>Staff Database</span>
                         </a>
                     </li>
                     <li class="nav-item">
@@ -705,11 +698,6 @@ if ($stmt) {
                     <li class="nav-item">
                         <a href="student_list.php" class="nav-link <?= ($currentPage == 'student_list.php') ? 'active' : '' ?>" data-tooltip="Results History">
                             <i class="fas fa-history nav-icon"></i><span>Results History</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="staff_assistant.php" class="nav-link <?= ($currentPage == 'staff_assistant.php') ? 'active' : '' ?>" data-tooltip="AI Report Assistant">
-                            <i class="fas fa-robot nav-icon"></i><span>AI Report Assistant</span>
                         </a>
                     </li>
                 </ul>

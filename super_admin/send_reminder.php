@@ -5,7 +5,15 @@ session_start();
 include '../config.php'; // Ensure this path is correct
 include './notifications.php'; // Optional, if needed for notifications
 
-// PHPMailer Autoload
+// PHPMailer Manual Include (use this if Composer doesn't work)
+// Uncomment these lines and comment out the autoload line if using manual installation
+/*
+require_once __DIR__ . '/../phpmailer/src/PHPMailer.php';
+require_once __DIR__ . '/../phpmailer/src/SMTP.php';
+require_once __DIR__ . '/../phpmailer/src/Exception.php';
+*/
+
+// PHPMailer Autoload (use this if Composer is working)
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
@@ -26,7 +34,7 @@ function sendFeeReminderEmail(
     string $dueDate,
     string $ollamaApiUrl = 'http://localhost:11434/api/generate',
     string $modelName = 'gemma3:1b',
-    string $gmailUsername = 'solidrockgroupofschool48@gmail.com',
+    string $gmailUsername = 'ronaldbvirinyangwe@gmail.com',
     string $gmailAppPassword = 'bkepemqcdyxxedlr',
     string $senderName = 'Solid Rock Accounts'
 ): bool {
@@ -35,6 +43,15 @@ function sendFeeReminderEmail(
         error_log("sendFeeReminderEmail was called with an empty email for student {$studentName}. Aborting.");
         return false;
     }
+
+    // Log input parameters for debugging
+    error_log("sendFeeReminderEmail called with parameters:");
+    error_log("Parent Email: {$parentEmail}");
+    error_log("Parent Name: {$parentName}");
+    error_log("Student Name: {$studentName}");
+    error_log("Amount Due: {$amountDue}");
+    error_log("Due Date: {$dueDate}");
+    error_log("Ollama API URL: {$ollamaApiUrl}");
 
     $formattedDueDate = !empty($dueDate) ? date('F j, Y', strtotime($dueDate)) : 'as soon as possible';
     $emailSubject = "Fee Reminder for {$studentName} - Solid Rock Group of Schools ";
@@ -82,6 +99,13 @@ function sendFeeReminderEmail(
     $responseData = json_decode($responseJson, true);
     if (isset($responseData['response'])) {
         $generatedEmailBody = $responseData['response'];
+        
+        // Check if PHPMailer class exists before using it
+        if (!class_exists('PHPMailer\PHPMailer\PHPMailer')) {
+            error_log("PHPMailer class not found. Please ensure PHPMailer is properly installed.");
+            return false;
+        }
+        
         $mail = new PHPMailer(true);
         try {
             // --- PHPMailer Server Settings ---

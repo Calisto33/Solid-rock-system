@@ -271,7 +271,7 @@ $pass_rate_line_chart_data_json = json_encode($pass_rate_line_chart_data);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Super Admin Dashboard - Solid Rock Group of Schools</title>
+    <title>Super Admin Dashboard - Solid Rock </title>
     
     <!-- Favicon -->
     <link rel="icon" type="image/jpeg" href="../images/logo.jpeg">
@@ -283,7 +283,7 @@ $pass_rate_line_chart_data_json = json_encode($pass_rate_line_chart_data);
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* Updated color scheme to match Solid Rock branding */
+        /* Updated color scheme to match Solid Rock  Rock branding */
         :root {
             --primary-bg: #f8fafc;
             --sidebar-bg: #FFFFFF;
@@ -943,7 +943,7 @@ $pass_rate_line_chart_data_json = json_encode($pass_rate_line_chart_data);
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <i class="fas fa-graduation-cap logo-icon"></i> 
-            <span class="brand-name">Solid Rock</span>
+            <span class="brand-name">Solid </span>
         </div>
 
         <div class="main-menu-title">Super Admin Menu</div>
@@ -964,12 +964,6 @@ $pass_rate_line_chart_data_json = json_encode($pass_rate_line_chart_data);
                 <a href="manage_staff.php" class="nav-link">
                     <i class="fas fa-user-tie"></i>
                     <span>Manage Staff</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="student_records.php" class="nav-link">
-                    <i class="fas fa-address-book"></i>
-                    <span>Student Records</span>
                 </a>
             </li>
             <li class="nav-item">
@@ -1044,7 +1038,6 @@ $pass_rate_line_chart_data_json = json_encode($pass_rate_line_chart_data);
                 <div class="header-actions">
                     <button><i class="fas fa-filter"></i> Filter</button>
                     <button><i class="fas fa-download"></i> Export</button>
-                    <button><i class="fas fa-share-alt"></i> Share</button>
                 </div>
             </div>
 
@@ -1052,7 +1045,7 @@ $pass_rate_line_chart_data_json = json_encode($pass_rate_line_chart_data);
                 <div class="stat-card">
                     <div class="label">Total Students</div>
                     <div class="value"><?= number_format($total_students); ?></div>
-                    <div class="comparison"><span class="positive"><i class="fas fa-arrow-up"></i> 5.2%</span> vs last month</div>
+                    <div class="comparison"><span class="positive"><i class="fas fa-arrow-up"></i> 10.2%</span> vs last month</div>
                 </div>
                 <div class="stat-card">
                     <div class="label">Staff Members</div>
@@ -1062,7 +1055,7 @@ $pass_rate_line_chart_data_json = json_encode($pass_rate_line_chart_data);
                 <div class="stat-card">
                     <div class="label">Total Classes</div>
                     <div class="value"><?= number_format($total_classes); ?></div>
-                    <div class="comparison"><span class="negative"><i class="fas fa-arrow-down"></i> 0.5%</span> vs last month</div>
+                    <div class="comparison"><span class="positive"><i class="fas fa-arrow-up"></i> 0.5%</span> vs last month</div>
                 </div>
                 <div class="stat-card">
                     <div class="label">System Efficiency</div>

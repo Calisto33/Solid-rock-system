@@ -1,6 +1,6 @@
 <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
-        <i class="fas fa-graduation-cap logo-icon"></i> <span class="brand-name">Solid Rock</span>
+        <i class="fas fa-graduation-cap logo-icon"></i> <span class="brand-name">Solid Rock </span>
     </div>
 
     <div class="main-menu-title">Main Menu</div>
@@ -28,12 +28,6 @@
             <a href="manage_staff.php" class="nav-link <?= ($currentPage === 'staff') ? 'active' : ''; ?>">
                 <i class="fas fa-user-tie"></i>
                 <span>Manage Staff</span>
-            </a>
-        </li>
-        <li class="nav-item">
-            <a href="student_records.php" class="nav-link <?= ($currentPage === 'records') ? 'active' : ''; ?>">
-                <i class="fas fa-address-book"></i>
-                <span>Student Records</span>
             </a>
         </li>
          <li class="nav-item">

@@ -2,7 +2,7 @@
 session_start();
 include '../config.php';
 
-// ADDED: Helper function to safely display values and handle NULL
+// Helper function to safely display values and handle NULL
 function safe_display($value, $default = 'N/A') {
     if ($value === null || $value === '') {
         return htmlspecialchars($default);
@@ -16,8 +16,8 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['role'] != 'admin' && $_SESSION['
     exit();
 }
 
-// Fetch all students from the student table - FIXED: Added id column
-$studentsQuery = "SELECT id, student_id, username, course, year, class FROM students";
+// Fetch all students with fields that exist in your database
+$studentsQuery = "SELECT student_id, user_id, username, first_name, last_name, course, year, class, date_of_birth, phone, address, email, status FROM students";
 $studentsResult = $conn->query($studentsQuery);
 
 if (!$studentsResult) {
@@ -264,6 +264,21 @@ if (!$studentsResult) {
         .status-active {
             background-color: rgba(74, 222, 128, 0.15);
             color: #15803d;
+        }
+
+        .status-inactive {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #dc2626;
+        }
+
+        .status-graduated {
+            background-color: rgba(59, 130, 246, 0.15);
+            color: #2563eb;
+        }
+
+        .status-transfer {
+            background-color: rgba(245, 158, 11, 0.15);
+            color: #d97706;
         }
 
         .btn {
@@ -513,10 +528,14 @@ if (!$studentsResult) {
                         <thead>
                             <tr>
                                 <th>Student ID</th>
+                                <th>First Name</th>
+                                <th>Last Name</th>
                                 <th>Username</th>
-                                <th class="hide-sm">Combination</th>
+                                <th class="hide-sm">Course</th>
                                 <th class="hide-sm">Year</th>
                                 <th>Class</th>
+                                <th class="hide-sm">Date of Birth</th>
+                                <th class="hide-sm">Email</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
@@ -526,26 +545,50 @@ if (!$studentsResult) {
                                 <?php while ($student = $studentsResult->fetch_assoc()): ?>
                                     <tr>
                                         <td class="student-id"><?= safe_display($student['student_id']) ?></td>
-                                        <td>
-                                            <div><?= safe_display($student['username'], 'No Username') ?></div>
-                                        </td>
+                                        <td><?= safe_display($student['first_name']) ?></td>
+                                        <td><?= safe_display($student['last_name']) ?></td>
+                                        <td><?= safe_display($student['username'], 'No Username') ?></td>
                                         <td class="hide-sm"><?= safe_display($student['course'], 'Not Assigned') ?></td>
                                         <td class="hide-sm"><?= safe_display($student['year'], 'Not Set') ?></td>
                                         <td><?= safe_display($student['class'], 'Not Assigned') ?></td>
+                                        <td class="hide-sm"><?= safe_display($student['date_of_birth'], 'Not Set') ?></td>
+                                        <td class="hide-sm"><?= safe_display($student['email'], 'No Email') ?></td>
                                         <td>
-                                            <span class="status-badge status-active">
-                                                <i class="fas fa-circle"></i>
-                                                Active
+                                            <?php 
+                                            $status = strtolower($student['status']);
+                                            $status_class = 'status-active';
+                                            $status_icon = 'fas fa-circle';
+                                            
+                                            switch($status) {
+                                                case 'inactive':
+                                                    $status_class = 'status-inactive';
+                                                    $status_icon = 'fas fa-circle';
+                                                    break;
+                                                case 'graduated':
+                                                    $status_class = 'status-graduated';
+                                                    $status_icon = 'fas fa-graduation-cap';
+                                                    break;
+                                                case 'transfer':
+                                                    $status_class = 'status-transfer';
+                                                    $status_icon = 'fas fa-exchange-alt';
+                                                    break;
+                                                default:
+                                                    $status_class = 'status-active';
+                                                    $status_icon = 'fas fa-circle';
+                                            }
+                                            ?>
+                                            <span class="status-badge <?= $status_class ?>">
+                                                <i class="<?= $status_icon ?>"></i>
+                                                <?= ucfirst(safe_display($student['status'], 'Active')) ?>
                                             </span>
                                         </td>
                                         <td>
                                             <div class="actions">
-                                                <!-- FIXED: Using integer id instead of student_id -->
-                                                <a href="edit_student_profile.php?id=<?= $student['id'] ?>" class="btn btn-primary">
+                                                <a href="edit_student_profile.php?student_id=<?= $student['student_id'] ?>" class="btn btn-primary">
                                                     <i class="fas fa-pen"></i>
                                                     Edit
                                                 </a>
-                                                <a href="view_student.php?id=<?= $student['id'] ?>" class="btn btn-outline btn-icon">
+                                                <a href="view_student.php?student_id=<?= $student['student_id'] ?>" class="btn btn-outline btn-icon">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
                                             </div>
@@ -554,7 +597,7 @@ if (!$studentsResult) {
                                 <?php endwhile; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="7">
+                                    <td colspan="11">
                                         <div class="empty-state">
                                             <i class="fas fa-user-slash"></i>
                                             <p class="empty-state-text">No students found in the database.</p>
@@ -606,6 +649,38 @@ if (!$studentsResult) {
             <p>&copy; <?php echo date("Y"); ?> WiseTech College. All rights reserved.</p>
         </div>
     </footer>
+
+    <script>
+        // Simple search functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.querySelector('.search-input');
+            const tableRows = document.querySelectorAll('tbody tr');
+            
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                tableRows.forEach(row => {
+                    if (row.querySelector('.empty-state')) return; // Skip empty state row
+                    
+                    const studentId = row.cells[0].textContent.toLowerCase();
+                    const firstName = row.cells[1].textContent.toLowerCase();
+                    const lastName = row.cells[2].textContent.toLowerCase();
+                    const username = row.cells[3].textContent.toLowerCase();
+                    const course = row.cells[4] ? row.cells[4].textContent.toLowerCase() : '';
+                    const email = row.cells[8] ? row.cells[8].textContent.toLowerCase() : '';
+                    
+                    const matches = studentId.includes(searchTerm) || 
+                                  firstName.includes(searchTerm) || 
+                                  lastName.includes(searchTerm) || 
+                                  username.includes(searchTerm) ||
+                                  course.includes(searchTerm) ||
+                                  email.includes(searchTerm);
+                    
+                    row.style.display = matches ? '' : 'none';
+                });
+            });
+        });
+    </script>
 </body>
 </html>
 <?php

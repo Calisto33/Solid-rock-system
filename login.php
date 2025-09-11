@@ -93,7 +93,7 @@ unset($_SESSION['login_error']);
             width: 100%;
             height: 100%;
             background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23003366' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
-            animation: float 20s linear infinite;
+            /* animation: float 20s linear infinite; */
             pointer-events: none;
         }
 
@@ -641,10 +641,10 @@ unset($_SESSION['login_error']);
             margin-left: 10px;
         }
 
-        @keyframes spin {
+        /* @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
-        }
+        } */
     </style>
 </head>
 <body>
@@ -807,7 +807,7 @@ unset($_SESSION['login_error']);
             }, 1000);
         });
 
-        // Add CSS for ripple effect
+        Add CSS for ripple effect
         const rippleStyle = document.createElement('style');
         rippleStyle.textContent = `
             @keyframes ripple {

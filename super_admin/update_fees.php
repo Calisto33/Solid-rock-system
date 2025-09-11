@@ -130,13 +130,13 @@ function sendPaymentConfirmationEmail(
     mysqli $dbConnection,
     string $ollamaApiUrl = 'http://localhost:11434/api/generate',
     string $modelName = 'gemma3:1b',
-    string $gmailUsername = 'solidrockgroupofschool48@gmail.com',
+    string $gmailUsername = 'ronaldbvirinyangwe@gmail.com',
     string $gmailAppPassword = 'bkepemqcdyxxedlr',
-    string $senderName = 'Solid Rock Group of Schools Accounts'
+    string $senderName = 'Solid Rock Group Of Schools Accounts'
 ): bool {
 
     $balanceDue = $totalFee - $amountPaidSoFar;
-    $emailSubject = "Payment Confirmation for {$studentName} - Solid Rock Group of Schools";
+    $emailSubject = "Payment Confirmation for {$studentName} - Solid Rock ";
 
     $keyPoints = [
         "Acknowledge the recent payment of $" . number_format($paymentAmount, 2) . " for {$studentName} via {$paymentMethod}.",
@@ -150,7 +150,7 @@ function sendPaymentConfirmationEmail(
 
     $promptParentNameForLLM = $parentName;
 
-    $prompt = "You are an AI assistant for Solid Rock Group of Schools. Your task is to draft ONLY the BODY of a professional and friendly payment confirmation email.\n\n";
+    $prompt = "You are an AI assistant for Solid Rock Group Of Schools. Your task is to draft ONLY the BODY of a professional and friendly payment confirmation email.\n\n";
     $prompt .= "The email is addressed to {$promptParentNameForLLM}.\n";
     $prompt .= "The subject line for this email will be: \"{$emailSubject}\". Do NOT include the subject line itself in the email body you generate.\n\n";
 
@@ -160,7 +160,7 @@ function sendPaymentConfirmationEmail(
     }
     $prompt .= "\nMaintain a courteous and professional tone.\n";
     $prompt .= "Start the email body *directly* with the greeting (e.g., 'Dear {$promptParentNameForLLM},').\n";
-    $prompt .= "End the email body with a professional closing from 'Solid Rock Accounts Department'.\n";
+    $prompt .= "End the email body with a professional closing from 'Solid Rock  Accounts Department'.\n";
     $prompt .= "Do NOT include any introductory phrases like 'Here is the draft,' 'Okay, here is the email body,' or any similar conversational text before the actual email content.\n";
     $prompt .= "Generate only the email body content.\n";
 
@@ -849,7 +849,7 @@ $stmt_payments_history->close();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Update Fees (Student ID: <?= htmlspecialchars($student_id) ?>) | Solid Rock</title>
+    <title>Update Fees (Student ID: <?= htmlspecialchars($student_id) ?>) | Solid Rock </title>
     <link rel="icon" type="image/jpeg" href="../images/logo.jpeg">
     <link rel="shortcut icon" type="image/jpeg" href="../images/logo.jpeg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -955,7 +955,7 @@ $stmt_payments_history->close();
     <header class="header">
         <div class="header-left">
             <button class="mobile-menu-btn" id="mobileMenuBtn"><i class="fas fa-bars"></i></button>
-            <img src="../images/logo.jpeg" alt="Solid Rock Logo" class="logo"> <h1 class="header-title">Student Fee Management</h1>
+            <img src="../images/logo.jpeg" alt="Solid Rock  Logo" class="logo"> <h1 class="header-title">Student Fee Management</h1>
         </div>
         <div class="header-actions">
             <a href="fees.php" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Fees Overview</a>
@@ -1100,7 +1100,7 @@ $stmt_payments_history->close();
 
     <footer class="footer">
         <div class="footer-content">
-            <img src="../images/logo.jpg" alt="Solid rock Logo" class="footer-logo"> <p>&copy; <?php echo date("Y"); ?> Mirilax-Scales Portal. All rights reserved.</p>
+            <img src="../images/logo.jpg" alt="Solid Rock  Logo" class="footer-logo"> <p>&copy; <?php echo date("Y"); ?> Mirilax-Scales Portal. All rights reserved.</p>
         </div>
     </footer>
 

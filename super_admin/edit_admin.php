@@ -383,7 +383,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <body>
     <header class="header">
         <div class="header-left">
-            <img src="../images/logo.jpeg" alt="Solid Rock Logo">
+            <img src="../images/logo.jpeg" alt="Solid Rock   Logo">
             <h1>Edit Admin</h1>
             <button class="menu-toggle" id="menuToggle">
                 <i class="fas fa-bars"></i>
@@ -434,7 +434,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     <footer class="footer">
         <div class="footer-content">
-            <img src="../images/logo.jpeg" alt="Solid Rock Logo">
+            <img src="../images/logo.jpeg" alt="Solid Rock  Logo">
             <p>&copy; <?php echo date("Y"); ?> Mirilax-Scales Portal. All rights reserved.</p>
         </div>
     </footer>
